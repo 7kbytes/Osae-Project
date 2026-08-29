@@ -1,0 +1,32 @@
+{
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Local Job Connector",
+        "supportEmail": "7kbytesgh@gmail.com",
+        "authorizedRedirectUris": [
+          "https://local-job-connector-gh.firebaseapp.com/__/auth/handler",
+          "https://local-job-connector-gh.web.app/__/auth/handler"
+        ]
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "212011996599",
+    "project_id": "local-job-connector-gh",
+    "storage_bucket": "local-job-connector-gh.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:212011996599:android:1a2ec707dc0188cd1cc432",
+        "android_client_info": {
+          "package_name": "com.osae.localjobconnector.local_job_connector"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBiKhEKSj-FPhD455P4SaCIJVKkYsyljbA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

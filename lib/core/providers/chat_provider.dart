@@ -1,0 +1,202 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
+import '../models/chat_model.dart';
+import '../repositories/chat_repository.dart';
+import '../services/firebase_service.dart';
+import '../services/local_storage_service.dart';
+
+class ChatProvider with ChangeNotifier {
+  final ChatRepository _chatRepository;
+  final LocalStorageService _localStorageService;
+  StreamSubscription<List<ChatRoom>>? _roomsSubscription;
+  final Map<String, StreamSubscription<List<ChatMessage>>> _messageSubscriptions = {};
+
+  final Map<String, List<ChatMessage>> _messagesPerRoom = {};
+  List<ChatRoom> _rooms = [];
+
+  ChatProvider({
+    ChatRepository? chatRepository,
+    LocalStorageService? localStorageService,
+    String currentUserId = 'seeker_001',
+  })  : _chatRepository = chatRepository ??
+            (FirebaseService.isInitialized
+                ? FirestoreChatRepository()
+                : InMemoryChatRepository()),
+        _localStorageService =
+            localStorageService ?? LocalStorageService.instance {
+    _initData(currentUserId);
+  }
+
+  void _initData(String currentUserId) {
+    final cachedRooms = _localStorageService.getChatRooms();
+    if (cachedRooms.isNotEmpty) {
+      _rooms = List.from(cachedRooms);
+      for (final r in _rooms) {
+        final cachedMsgs = _localStorageService.getMessages(r.id);
+        if (cachedMsgs.isNotEmpty) {
+          _messagesPerRoom[r.id] = List.from(cachedMsgs);
+        }
+      }
+    } else if (_chatRepository is InMemoryChatRepository) {
+      final inMemory = _chatRepository;
+      _rooms = List<ChatRoom>.from(inMemory.rooms);
+      for (final r in _rooms) {
+        final msgs = inMemory.getMessages(r.id);
+        _messagesPerRoom[r.id] = List<ChatMessage>.from(msgs);
+        _localStorageService.saveMessages(r.id, msgs);
+      }
+      _localStorageService.saveChatRooms(_rooms);
+    }
+
+    _roomsSubscription?.cancel();
+    _roomsSubscription = _chatRepository.getChatRoomsStream(currentUserId).listen((updatedRooms) {
+      if (updatedRooms.isNotEmpty) {
+        _rooms = List.from(updatedRooms);
+        _localStorageService.saveChatRooms(_rooms);
+        notifyListeners();
+      }
+    });
+  }
+
+  List<ChatRoom> get rooms => List.unmodifiable(_rooms);
+
+  List<ChatMessage> getMessages(String roomId) {
+    if (!_messagesPerRoom.containsKey(roomId)) {
+      final cached = _localStorageService.getMessages(roomId);
+      if (cached.isNotEmpty) {
+        _messagesPerRoom[roomId] = List.from(cached);
+      }
+    }
+
+    if (!_messageSubscriptions.containsKey(roomId)) {
+      _messageSubscriptions[roomId] =
+          _chatRepository.getMessagesStream(roomId).listen((messages) {
+        _messagesPerRoom[roomId] = List.from(messages);
+        _localStorageService.saveMessages(roomId, messages);
+        notifyListeners();
+      });
+    }
+    return List.unmodifiable(_messagesPerRoom[roomId] ?? []);
+  }
+
+  String getOrCreateRoom({
+    required String jobId,
+    required String jobTitle,
+    required String seekerId,
+    required String seekerName,
+    required String posterId,
+    required String posterName,
+  }) {
+    final existingRoom = _rooms.firstWhere(
+      (r) => r.jobId == jobId && r.seekerId == seekerId,
+      orElse: () => ChatRoom(
+        id: '',
+        jobId: '',
+        jobTitle: '',
+        seekerId: '',
+        seekerName: '',
+        posterId: '',
+        posterName: '',
+        lastMessage: '',
+        updatedAt: DateTime.now(),
+      ),
+    );
+
+    if (existingRoom.id.isNotEmpty) {
+      return existingRoom.id;
+    }
+
+    final newRoomId = 'chat_${DateTime.now().millisecondsSinceEpoch}';
+    final newRoom = ChatRoom(
+      id: newRoomId,
+      jobId: jobId,
+      jobTitle: jobTitle,
+      seekerId: seekerId,
+      seekerName: seekerName,
+      posterId: posterId,
+      posterName: posterName,
+      lastMessage: 'Chat started for $jobTitle',
+      updatedAt: DateTime.now(),
+    );
+
+    _rooms.insert(0, newRoom);
+    final initialMsgs = [
+      ChatMessage(
+        id: 'msg_init_${DateTime.now().millisecondsSinceEpoch}',
+        senderId: seekerId,
+        senderName: seekerName,
+        text: 'Hello, I am interested in your job posting: $jobTitle.',
+        timestamp: DateTime.now(),
+        isRead: true,
+      )
+    ];
+    _messagesPerRoom[newRoomId] = initialMsgs;
+
+    _localStorageService.saveChatRooms(_rooms);
+    _localStorageService.saveMessages(newRoomId, initialMsgs);
+
+    notifyListeners();
+
+    // Asynchronously call repository
+    _chatRepository.getOrCreateChatRoom(
+      jobId: jobId,
+      jobTitle: jobTitle,
+      seekerId: seekerId,
+      seekerName: seekerName,
+      posterId: posterId,
+      posterName: posterName,
+    );
+
+    return newRoomId;
+  }
+
+  void sendMessage({
+    required String roomId,
+    required String senderId,
+    required String senderName,
+    required String text,
+  }) {
+    if (text.trim().isEmpty) return;
+
+    final newMessage = ChatMessage(
+      id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
+      senderId: senderId,
+      senderName: senderName,
+      text: text.trim(),
+      timestamp: DateTime.now(),
+      isRead: false,
+    );
+
+    if (!_messagesPerRoom.containsKey(roomId)) {
+      _messagesPerRoom[roomId] = [];
+    }
+
+    _messagesPerRoom[roomId]!.add(newMessage);
+
+    final roomIndex = _rooms.indexWhere((r) => r.id == roomId);
+    if (roomIndex != -1) {
+      final updatedRoom = _rooms[roomIndex].copyWith(
+        lastMessage: text.trim(),
+        updatedAt: DateTime.now(),
+      );
+      _rooms.removeAt(roomIndex);
+      _rooms.insert(0, updatedRoom);
+    }
+
+    _localStorageService.saveMessages(roomId, _messagesPerRoom[roomId]!);
+    _localStorageService.saveChatRooms(_rooms);
+
+    notifyListeners();
+
+    _chatRepository.sendMessage(roomId, newMessage);
+  }
+
+  @override
+  void dispose() {
+    _roomsSubscription?.cancel();
+    for (final sub in _messageSubscriptions.values) {
+      sub.cancel();
+    }
+    super.dispose();
+  }
+}
