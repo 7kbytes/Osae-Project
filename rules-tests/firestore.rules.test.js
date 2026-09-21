@@ -63,6 +63,19 @@ test('users: admin can read and change any profile', async () => {
   await assertSucceeds(getDoc(doc(as('admin1'), 'users/seeker1')));
   await assertSucceeds(updateDoc(doc(as('admin1'), 'users/seeker1'), { role: 'poster' }));
 });
+test('users: owner can edit name, phone and city', async () => {
+  await assertSucceeds(updateDoc(doc(as('seeker1'), 'users/seeker1'), {
+    displayName: 'New Name', phone: '0241234567', city: 'Kumasi',
+  }));
+  await assertFails(updateDoc(doc(as('seeker1'), 'users/seeker1'), { displayName: '' }));
+});
+test('users: owner cannot set their own rating or createdAt', async () => {
+  await assertFails(updateDoc(doc(as('seeker1'), 'users/seeker1'), { rating: 5 }));
+  await assertFails(updateDoc(doc(as('seeker1'), 'users/seeker1'), { createdAt: 'x' }));
+  await assertFails(setDoc(doc(as('new1'), 'users/new1'), { displayName: 'N', role: 'seeker', rating: 4.9 }));
+  await assertSucceeds(setDoc(doc(as('new2'), 'users/new2'), { displayName: 'N', role: 'seeker', rating: 5 }));
+  await assertSucceeds(updateDoc(doc(as('admin1'), 'users/seeker1'), { rating: 4 }));
+});
 test('users: favorites are private to the owner', async () => {
   await assertSucceeds(setDoc(doc(as('seeker1'), 'users/seeker1/favorites/j1'), { jobId: 'j1' }));
   await assertFails(setDoc(doc(as('other'), 'users/seeker1/favorites/j1'), { jobId: 'j1' }));

@@ -6,6 +6,15 @@ abstract class UserRepository {
   Future<AppUser?> getUser(String userId);
   Future<void> saveUser(AppUser user);
   Future<void> updateUserRole(String userId, UserRole role);
+
+  /// Writes only the user-editable fields, so rules can keep `rating` and
+  /// `createdAt` out of the owner's reach.
+  Future<void> updateProfile(
+    String userId, {
+    required String displayName,
+    required String phone,
+    required String city,
+  });
   Future<void> deleteUser(String userId);
 }
 
@@ -45,6 +54,20 @@ class FirestoreUserRepository implements UserRepository {
   Future<void> updateUserRole(String userId, UserRole role) async {
     await _usersCollection.doc(userId).update({'role': role.name});
   }
+
+  @override
+  Future<void> updateProfile(
+    String userId, {
+    required String displayName,
+    required String phone,
+    required String city,
+  }) async {
+    await _usersCollection.doc(userId).update({
+      'displayName': displayName,
+      'phone': phone,
+      'city': city,
+    });
+  }
 }
 
 class InMemoryUserRepository implements UserRepository {
@@ -68,6 +91,22 @@ class InMemoryUserRepository implements UserRepository {
   @override
   Future<void> deleteUser(String userId) async {
     _users.remove(userId);
+  }
+
+  @override
+  Future<void> updateProfile(
+    String userId, {
+    required String displayName,
+    required String phone,
+    required String city,
+  }) async {
+    final existing = _users[userId];
+    if (existing == null) throw StateError('No profile for $userId');
+    _users[userId] = existing.copyWith(
+      displayName: displayName,
+      phone: phone,
+      city: city,
+    );
   }
 
   @override

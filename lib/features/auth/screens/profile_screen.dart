@@ -6,6 +6,7 @@ import '../../../core/providers/application_provider.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/job_provider.dart';
 import '../../applications/screens/my_applications_screen.dart';
+import 'edit_profile_screen.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -337,6 +338,25 @@ class ProfileScreen extends StatelessWidget {
             ),
 
             const SizedBox(height: 24),
+
+            if (currentUser != null) ...[
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton.icon(
+                  key: const Key('edit_profile_button'),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const EditProfileScreen(),
+                    ),
+                  ),
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Edit Profile'),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
 
             // Sign Out Button
             SizedBox(

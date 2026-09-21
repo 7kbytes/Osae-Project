@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 import '../repositories/user_repository.dart';
 import '../services/firebase_service.dart';
 import '../services/local_storage_service.dart';
+import '../utils/input_sanitizer.dart';
 import '../services/mock_data.dart';
 
 /// Authentication state.
@@ -392,6 +393,52 @@ class AuthProvider with ChangeNotifier {
   // ---------------------------------------------------------------------------
   // Profile / sign out
   // ---------------------------------------------------------------------------
+
+  /// Saves the editable profile fields. Returns false and sets [lastError]
+  /// (leaving the profile unchanged) if validation or the backend fails.
+  Future<bool> updateProfile({
+    required String displayName,
+    required String phone,
+    required String city,
+  }) async {
+    _lastError = null;
+    final user = _currentUser;
+    if (user == null) return _fail('Not signed in.');
+
+    final name = InputSanitizer.sanitize(displayName).trim();
+    final cleanPhone = phone.trim();
+    final cleanCity = city.trim();
+    if (name.length < 2 || name.length > 100) {
+      return _fail('Enter a name between 2 and 100 characters.');
+    }
+    if (!isValidGhanaPhone(cleanPhone)) {
+      return _fail('Enter a valid Ghana phone number.');
+    }
+    if (cleanCity.isEmpty || cleanCity.length > 60) {
+      return _fail('Choose your city.');
+    }
+
+    try {
+      await _userRepository.updateProfile(
+        user.id,
+        displayName: name,
+        phone: cleanPhone,
+        city: cleanCity,
+      );
+    } catch (e) {
+      debugPrint('Update profile error: $e');
+      return _fail('Could not save your profile. Please try again.');
+    }
+
+    _currentUser = user.copyWith(
+      displayName: name,
+      phone: cleanPhone,
+      city: cleanCity,
+    );
+    await _localStorageService.saveUser(_currentUser!);
+    notifyListeners();
+    return true;
+  }
 
   Future<void> switchRole(UserRole newRole) async {
     if (_currentUser != null) {

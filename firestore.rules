@@ -50,8 +50,15 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && validUser();
-      allow update: if (isOwner(userId) && validUser()) || isAdmin();
+      // Rating starts at the default and only admins (later: Functions) change
+      // it; createdAt never changes.
+      allow create: if isOwner(userId) && validUser() &&
+        (!('rating' in request.resource.data) ||
+          request.resource.data.rating == 5);
+      allow update: if (isOwner(userId) && validUser() &&
+          !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['rating', 'createdAt'])) ||
+        isAdmin();
       allow delete: if isOwner(userId) || isAdmin();
 
       // Per-user saved jobs.
