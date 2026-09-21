@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../app/theme.dart';
 import '../../../core/models/job_model.dart';
+import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/job_provider.dart';
 import '../../../core/utils/form_validators.dart';
 import '../../../core/utils/input_sanitizer.dart';
@@ -71,37 +72,49 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     });
   }
 
-  void _submitJob() {
+  Future<void> _submitJob() async {
     if (!_formKey.currentState!.validate()) return;
 
     final jobProvider = Provider.of<JobProvider>(context, listen: false);
+    final me = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (me == null) return;
 
     final newJob = JobPost(
       id: 'job_${DateTime.now().millisecondsSinceEpoch}',
       title: InputSanitizer.sanitize(_titleController.text),
       description: InputSanitizer.sanitize(_descriptionController.text),
       category: _selectedCategory,
-      payRate: double.tryParse(InputSanitizer.sanitizeNumeric(_payRateController.text)) ?? 150.0,
+      payRate:
+          double.tryParse(
+            InputSanitizer.sanitizeNumeric(_payRateController.text),
+          ) ??
+          150.0,
       payUnit: _selectedPayUnit,
       currency: 'GHS',
       city: _selectedCity,
       locationName: InputSanitizer.sanitize(_locationController.text),
       latitude: _latitude,
       longitude: _longitude,
-      posterId: 'poster_001',
-      posterName: 'Vendor Store Owner',
+      posterId: me.id,
+      posterName: me.displayName,
       posterPhone: InputSanitizer.sanitizePhone(_phoneController.text),
       createdAt: DateTime.now(),
     );
 
-    jobProvider.addJob(newJob);
+    final saved = await jobProvider.addJob(newJob);
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Job posting created successfully!'),
-        backgroundColor: AppTheme.primaryColor,
+      SnackBar(
+        content: Text(
+          saved
+              ? 'Job posting created successfully!'
+              : (jobProvider.lastError ?? 'Could not save the job.'),
+        ),
+        backgroundColor: saved ? AppTheme.primaryColor : Colors.red,
       ),
     );
+    if (!saved) return;
 
     // Reset form
     _titleController.clear();
@@ -112,9 +125,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Post Informal Job'),
-      ),
+      appBar: AppBar(title: const Text('Post Informal Job')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(18.0),
         child: Form(
@@ -145,7 +156,12 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                   hintText: 'e.g. Market Offloader or Restaurant Waiter',
                   prefixIcon: Icon(Icons.work_outline),
                 ),
-                validator: (val) => FormValidators.validateRequired(val, 'Job Title', minLength: 3, maxLength: 100),
+                validator: (val) => FormValidators.validateRequired(
+                  val,
+                  'Job Title',
+                  minLength: 3,
+                  maxLength: 100,
+                ),
               ),
               const SizedBox(height: 16),
 
@@ -156,17 +172,14 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     child: DropdownButtonFormField<String>(
                       initialValue: _selectedCategory,
                       isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Category',
-                      ),
+                      decoration: const InputDecoration(labelText: 'Category'),
                       items: _categories
-                          .map((c) => DropdownMenuItem(
-                                value: c,
-                                child: Text(
-                                  c,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ))
+                          .map(
+                            (c) => DropdownMenuItem(
+                              value: c,
+                              child: Text(c, overflow: TextOverflow.ellipsis),
+                            ),
+                          )
                           .toList(),
                       onChanged: (val) =>
                           setState(() => _selectedCategory = val!),
@@ -177,17 +190,14 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     child: DropdownButtonFormField<String>(
                       initialValue: _selectedCity,
                       isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'City',
-                      ),
+                      decoration: const InputDecoration(labelText: 'City'),
                       items: _cities
-                          .map((c) => DropdownMenuItem(
-                                value: c,
-                                child: Text(
-                                  c,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ))
+                          .map(
+                            (c) => DropdownMenuItem(
+                              value: c,
+                              child: Text(c, overflow: TextOverflow.ellipsis),
+                            ),
+                          )
                           .toList(),
                       onChanged: _onCityChanged,
                     ),
@@ -222,13 +232,12 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         labelText: 'Pay Rate Unit',
                       ),
                       items: _payUnits
-                          .map((u) => DropdownMenuItem(
-                                value: u,
-                                child: Text(
-                                  u,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ))
+                          .map(
+                            (u) => DropdownMenuItem(
+                              value: u,
+                              child: Text(u, overflow: TextOverflow.ellipsis),
+                            ),
+                          )
                           .toList(),
                       onChanged: (val) =>
                           setState(() => _selectedPayUnit = val!),
@@ -246,7 +255,12 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                   hintText: 'e.g. Container 14 near Circle VIP Bus Station',
                   prefixIcon: Icon(Icons.pin_drop_outlined),
                 ),
-                validator: (val) => FormValidators.validateRequired(val, 'Location', minLength: 3, maxLength: 120),
+                validator: (val) => FormValidators.validateRequired(
+                  val,
+                  'Location',
+                  minLength: 3,
+                  maxLength: 120,
+                ),
               ),
               const SizedBox(height: 16),
 
@@ -272,7 +286,12 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                       'Describe what work needs to be done, working hours, and payment timing...',
                   alignLabelWithHint: true,
                 ),
-                validator: (val) => FormValidators.validateRequired(val, 'Job Description', minLength: 5, maxLength: 2000),
+                validator: (val) => FormValidators.validateRequired(
+                  val,
+                  'Job Description',
+                  minLength: 5,
+                  maxLength: 2000,
+                ),
               ),
               const SizedBox(height: 24),
 

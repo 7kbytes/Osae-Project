@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
@@ -6,49 +7,132 @@ import '../services/firebase_service.dart';
 import '../services/local_storage_service.dart';
 import '../services/mock_data.dart';
 
+/// Authentication state.
+///
+/// When Firebase is initialised the session is owned by Firebase Auth:
+/// credentials are verified for real, failures return `false` with
+/// [lastError] set, and no fake user is ever created.
+///
+/// When Firebase is *not* initialised (unit tests and explicit demo mode) the
+/// provider works against the injected repository with a local demo user.
 class AuthProvider with ChangeNotifier {
   final UserRepository _userRepository;
   final LocalStorageService _localStorageService;
-  bool _isAuthenticated = true; // Default logged in for seamless demo/test flow
+  bool _isAuthenticated = false;
   AppUser? _currentUser;
   String _authMethod = 'email'; // 'email' or 'google'
+  String? _email;
+  String? _lastError;
+  StreamSubscription<fb_auth.User?>? _authSubscription;
+
+  bool get _live => FirebaseService.isInitialized;
 
   AuthProvider({
     UserRepository? userRepository,
     LocalStorageService? localStorageService,
     bool startAuthenticated = true,
-  })  : _userRepository = userRepository ??
-            (FirebaseService.isInitialized
-                ? FirestoreUserRepository()
-                : InMemoryUserRepository()),
-        _localStorageService =
-            localStorageService ?? LocalStorageService.instance {
-    if (startAuthenticated) {
-      _initUser();
-    } else {
-      _isAuthenticated = false;
-      _currentUser = null;
+  }) : _userRepository =
+           userRepository ??
+           (FirebaseService.isInitialized
+               ? FirestoreUserRepository()
+               : InMemoryUserRepository()),
+       _localStorageService =
+           localStorageService ?? LocalStorageService.instance {
+    if (_live) {
+      _listenToFirebaseSession();
+    } else if (startAuthenticated) {
+      _isAuthenticated = true;
+      _initDemoUser();
     }
   }
 
-  void _initUser() {
+  // ---------------------------------------------------------------------------
+  // Session
+  // ---------------------------------------------------------------------------
+
+  void _listenToFirebaseSession() {
+    _authSubscription = fb_auth.FirebaseAuth.instance.authStateChanges().listen(
+      (fbUser) async {
+        if (fbUser == null) {
+          if (_isAuthenticated) {
+            _isAuthenticated = false;
+            _currentUser = null;
+            _email = null;
+            await _localStorageService.clearUser();
+            notifyListeners();
+          }
+          return;
+        }
+        // Sign-in/sign-up flows set the user themselves; only restore here when
+        // a stored session is picked up on start-up.
+        if (_currentUser?.id == fbUser.uid && _isAuthenticated) return;
+        _currentUser = await _loadOrCreateProfile(fbUser);
+        _email = fbUser.email;
+        _isAuthenticated = true;
+        notifyListeners();
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _initDemoUser() {
     final cachedUser = _localStorageService.getUser();
-    if (cachedUser != null) {
-      _currentUser = cachedUser;
-    } else {
-      _currentUser = MockData.currentSeekerUser;
-      _localStorageService.saveUser(_currentUser!);
-    }
+    _currentUser = cachedUser ?? MockData.currentSeekerUser;
+    if (cachedUser == null) _localStorageService.saveUser(_currentUser!);
     _userRepository.saveUser(_currentUser!);
   }
+
+  /// Loads the stored profile for [fbUser]; only creates one when none exists
+  /// (so a returning user keeps their role, city and phone).
+  Future<AppUser> _loadOrCreateProfile(
+    fb_auth.User fbUser, {
+    String? displayName,
+    String? phone,
+    UserRole role = UserRole.seeker,
+    String city = 'Accra',
+  }) async {
+    var user = await _userRepository.getUser(fbUser.uid);
+    if (user == null) {
+      user = AppUser(
+        id: fbUser.uid,
+        displayName:
+            displayName ??
+            fbUser.displayName ??
+            (fbUser.email ?? 'User').split('@').first.replaceAll('.', ' '),
+        phone: phone ?? fbUser.phoneNumber ?? '',
+        role: role,
+        city: city,
+        rating: 5.0,
+        createdAt: DateTime.now(),
+      );
+      await _userRepository.saveUser(user);
+    }
+    await _localStorageService.saveUser(user);
+    return user;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Getters
+  // ---------------------------------------------------------------------------
 
   bool get isAuthenticated => _isAuthenticated;
   AppUser? get currentUser => _currentUser;
   String get authMethod => _authMethod;
-  String get userEmail =>
-      _currentUser != null && _currentUser!.displayName.isNotEmpty
-          ? '${_currentUser!.displayName.toLowerCase().replaceAll(' ', '.')}@gmail.com'
-          : 'user@gmail.com';
+
+  /// Human-readable reason the last sign-in/sign-up attempt failed.
+  String? get lastError => _lastError;
+
+  String get userEmail {
+    if (_email != null && _email!.isNotEmpty) return _email!;
+    return _currentUser != null && _currentUser!.displayName.isNotEmpty
+        ? '${_currentUser!.displayName.toLowerCase().replaceAll(' ', '.')}@gmail.com'
+        : 'user@gmail.com';
+  }
 
   /// Validates Ghanaian phone numbers in international (+233) or local (02X/05X/020) format.
   static bool isValidGhanaPhone(String phone) {
@@ -57,60 +141,63 @@ class AuthProvider with ChangeNotifier {
     return ghanaPhoneRegex.hasMatch(sanitized);
   }
 
+  static String _messageFor(fb_auth.FirebaseAuthException e) {
+    switch (e.code) {
+      case 'invalid-credential':
+      case 'wrong-password':
+      case 'user-not-found':
+      case 'invalid-email':
+        return 'Incorrect email or password.';
+      case 'email-already-in-use':
+        return 'An account with this email already exists.';
+      case 'weak-password':
+        return 'Password is too weak. Use at least 6 characters.';
+      case 'too-many-requests':
+        return 'Too many attempts. Please try again later.';
+      case 'network-request-failed':
+        return 'No internet connection. Please try again.';
+      case 'user-disabled':
+        return 'This account has been disabled.';
+      case 'popup-closed-by-user':
+      case 'cancelled-popup-request':
+        return 'Sign-in was cancelled.';
+      default:
+        return 'Could not sign in. Please try again.';
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Sign in / up
+  // ---------------------------------------------------------------------------
+
   Future<bool> signInWithEmail(String email, String password) async {
-    _isAuthenticated = true;
-    _authMethod = 'email';
+    _lastError = null;
 
-    try {
-      if (FirebaseService.isInitialized) {
-        final credential =
-            await fb_auth.FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: email.trim(),
-          password: password.trim(),
-        );
-
-        final fbUser = credential.user;
-        final userId = fbUser?.uid ?? 'usr_${DateTime.now().millisecondsSinceEpoch}';
-        final displayName = fbUser?.displayName ?? email.split('@').first.replaceAll('.', ' ');
-
-        final user = AppUser(
-          id: userId,
-          displayName: displayName,
-          phone: fbUser?.phoneNumber ?? '+233 24 123 4567',
-          role: UserRole.seeker,
-          city: 'Accra',
-          rating: 5.0,
-          createdAt: DateTime.now(),
-        );
-
-        _currentUser = user;
-        await _localStorageService.saveUser(user);
-        await _userRepository.saveUser(user);
-        notifyListeners();
-        return true;
+    if (_live) {
+      try {
+        final credential = await fb_auth.FirebaseAuth.instance
+            .signInWithEmailAndPassword(
+              email: email.trim(),
+              password: password.trim(),
+            );
+        return await _completeLiveSignIn(credential.user, 'email');
+      } on fb_auth.FirebaseAuthException catch (e) {
+        return _fail(_messageFor(e));
+      } catch (e) {
+        debugPrint('Sign-in error: $e');
+        return _fail('Could not sign in. Please try again.');
       }
-    } catch (e) {
-      debugPrint('Firebase Auth live sign in exception (fallback active): $e');
     }
 
-    // Fallback/offline behavior
-    final userId = 'usr_${DateTime.now().millisecondsSinceEpoch}';
-    final user = AppUser(
-      id: userId,
+    // Local/demo mode (no Firebase).
+    _authMethod = 'email';
+    return _signInLocal(
+      id: 'usr_${DateTime.now().millisecondsSinceEpoch}',
       displayName: email.split('@').first.replaceAll('.', ' '),
       phone: '+233 24 123 4567',
       role: UserRole.seeker,
       city: 'Accra',
-      rating: 5.0,
-      createdAt: DateTime.now(),
     );
-
-    _currentUser = user;
-    await _localStorageService.saveUser(user);
-    await _userRepository.saveUser(user);
-
-    notifyListeners();
-    return true;
   }
 
   Future<bool> signUpWithEmail({
@@ -121,25 +208,21 @@ class AuthProvider with ChangeNotifier {
     required UserRole role,
     required String city,
   }) async {
-    _isAuthenticated = true;
-    _authMethod = 'email';
+    _lastError = null;
 
-    try {
-      if (FirebaseService.isInitialized) {
-        final credential =
-            await fb_auth.FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: email.trim(),
-          password: password.trim(),
-        );
-
+    if (_live) {
+      try {
+        final credential = await fb_auth.FirebaseAuth.instance
+            .createUserWithEmailAndPassword(
+              email: email.trim(),
+              password: password.trim(),
+            );
         final fbUser = credential.user;
-        if (fbUser != null) {
-          await fbUser.updateDisplayName(displayName);
-        }
-
-        final userId = fbUser?.uid ?? 'usr_${DateTime.now().millisecondsSinceEpoch}';
+        if (fbUser == null) return _fail('Could not create the account.');
+        await fbUser.updateDisplayName(displayName);
+        // The profile chosen at sign-up wins over any default.
         final user = AppUser(
-          id: userId,
+          id: fbUser.uid,
           displayName: displayName,
           phone: phone,
           role: role,
@@ -147,20 +230,81 @@ class AuthProvider with ChangeNotifier {
           rating: 5.0,
           createdAt: DateTime.now(),
         );
-
-        _currentUser = user;
-        await _localStorageService.saveUser(user);
         await _userRepository.saveUser(user);
+        await _localStorageService.saveUser(user);
+        _authMethod = 'email';
+        _email = fbUser.email;
+        _currentUser = user;
+        _isAuthenticated = true;
         notifyListeners();
         return true;
+      } on fb_auth.FirebaseAuthException catch (e) {
+        return _fail(_messageFor(e));
+      } catch (e) {
+        debugPrint('Sign-up error: $e');
+        return _fail('Could not create the account. Please try again.');
       }
-    } catch (e) {
-      debugPrint('Firebase Auth live sign up exception (fallback active): $e');
     }
 
-    final userId = 'usr_${DateTime.now().millisecondsSinceEpoch}';
+    _authMethod = 'email';
+    return _signInLocal(
+      id: 'usr_${DateTime.now().millisecondsSinceEpoch}',
+      displayName: displayName,
+      phone: phone,
+      role: role,
+      city: city,
+    );
+  }
+
+  Future<bool> signInWithGoogle() async {
+    _lastError = null;
+
+    if (_live) {
+      if (!kIsWeb) {
+        return _fail('Google sign-in is not available on this platform yet.');
+      }
+      try {
+        final credential = await fb_auth.FirebaseAuth.instance.signInWithPopup(
+          fb_auth.GoogleAuthProvider(),
+        );
+        return await _completeLiveSignIn(credential.user, 'google');
+      } on fb_auth.FirebaseAuthException catch (e) {
+        return _fail(_messageFor(e));
+      } catch (e) {
+        debugPrint('Google sign-in error: $e');
+        return _fail('Could not sign in with Google. Please try again.');
+      }
+    }
+
+    _authMethod = 'google';
+    return _signInLocal(
+      id: 'google_usr_${DateTime.now().millisecondsSinceEpoch}',
+      displayName: 'Kwame Google User',
+      phone: '+233 20 111 2233',
+      role: UserRole.seeker,
+      city: 'Accra',
+    );
+  }
+
+  Future<bool> _completeLiveSignIn(fb_auth.User? fbUser, String method) async {
+    if (fbUser == null) return _fail('Could not sign in. Please try again.');
+    _currentUser = await _loadOrCreateProfile(fbUser);
+    _authMethod = method;
+    _email = fbUser.email;
+    _isAuthenticated = true;
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> _signInLocal({
+    required String id,
+    required String displayName,
+    required String phone,
+    required UserRole role,
+    required String city,
+  }) async {
     final user = AppUser(
-      id: userId,
+      id: id,
       displayName: displayName,
       phone: phone,
       role: role,
@@ -168,67 +312,23 @@ class AuthProvider with ChangeNotifier {
       rating: 5.0,
       createdAt: DateTime.now(),
     );
-
-    _currentUser = user;
-    await _localStorageService.saveUser(user);
-    await _userRepository.saveUser(user);
-
-    notifyListeners();
-    return true;
-  }
-
-  Future<bool> signInWithGoogle() async {
     _isAuthenticated = true;
-    _authMethod = 'google';
-
-    try {
-      if (FirebaseService.isInitialized && kIsWeb) {
-        final googleProvider = fb_auth.GoogleAuthProvider();
-        final credential =
-            await fb_auth.FirebaseAuth.instance.signInWithPopup(googleProvider);
-
-        final fbUser = credential.user;
-        final userId = fbUser?.uid ?? 'google_usr_${DateTime.now().millisecondsSinceEpoch}';
-        final displayName = fbUser?.displayName ?? 'Kwame Google User';
-
-        final user = AppUser(
-          id: userId,
-          displayName: displayName,
-          phone: fbUser?.phoneNumber ?? '+233 20 111 2233',
-          role: UserRole.seeker,
-          city: 'Accra',
-          rating: 5.0,
-          createdAt: DateTime.now(),
-        );
-
-        _currentUser = user;
-        await _localStorageService.saveUser(user);
-        await _userRepository.saveUser(user);
-        notifyListeners();
-        return true;
-      }
-    } catch (e) {
-      debugPrint('Firebase Google Auth exception (fallback active): $e');
-    }
-
-    final userId = 'google_usr_${DateTime.now().millisecondsSinceEpoch}';
-    final user = AppUser(
-      id: userId,
-      displayName: 'Kwame Google User',
-      phone: '+233 20 111 2233',
-      role: UserRole.seeker,
-      city: 'Accra',
-      rating: 5.0,
-      createdAt: DateTime.now(),
-    );
-
     _currentUser = user;
     await _localStorageService.saveUser(user);
     await _userRepository.saveUser(user);
-
     notifyListeners();
     return true;
   }
+
+  bool _fail(String message) {
+    _lastError = message;
+    notifyListeners();
+    return false;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Profile / sign out
+  // ---------------------------------------------------------------------------
 
   Future<void> switchRole(UserRole newRole) async {
     if (_currentUser != null) {
@@ -241,7 +341,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> signOut() async {
     try {
-      if (FirebaseService.isInitialized) {
+      if (_live) {
         await fb_auth.FirebaseAuth.instance.signOut();
       }
     } catch (e) {
@@ -249,6 +349,7 @@ class AuthProvider with ChangeNotifier {
     }
     _isAuthenticated = false;
     _currentUser = null;
+    _email = null;
     await _localStorageService.clearUser();
     notifyListeners();
   }

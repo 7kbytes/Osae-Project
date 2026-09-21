@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/job_application_model.dart';
 import '../repositories/application_repository.dart';
@@ -12,18 +13,24 @@ class ApplicationProvider with ChangeNotifier {
   String? _currentSeekerId;
   bool _isLoading = false;
   String? _errorMessage;
+  String? _boundUserId;
+  StreamSubscription<List<JobApplication>>? _seekerSub;
+  StreamSubscription<List<JobApplication>>? _posterSub;
+  List<JobApplication> _asSeeker = [];
+  List<JobApplication> _asPoster = [];
 
   ApplicationProvider({
     ApplicationRepository? applicationRepository,
     LocalStorageService? localStorageService,
     String? initialSeekerId,
-  })  : _applicationRepository = applicationRepository ??
-            (FirebaseService.isInitialized
-                ? FirestoreApplicationRepository()
-                : InMemoryApplicationRepository()),
-        _localStorageService =
-            localStorageService ?? LocalStorageService.instance,
-        _currentSeekerId = initialSeekerId {
+  }) : _applicationRepository =
+           applicationRepository ??
+           (FirebaseService.isInitialized
+               ? FirestoreApplicationRepository()
+               : InMemoryApplicationRepository()),
+       _localStorageService =
+           localStorageService ?? LocalStorageService.instance,
+       _currentSeekerId = initialSeekerId {
     _initData();
   }
 
@@ -32,6 +39,64 @@ class ApplicationProvider with ChangeNotifier {
     if (cached.isNotEmpty) {
       _applications = List.from(cached);
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Live sync
+  // ---------------------------------------------------------------------------
+
+  /// Binds the provider to the signed-in user: loads and live-updates every
+  /// application they sent (as seeker) or received (as poster).
+  void bindUser(String userId) {
+    if (userId == _boundUserId) return;
+    _boundUserId = userId;
+    _seekerSub?.cancel();
+    _posterSub?.cancel();
+    _asSeeker = [];
+    _asPoster = [];
+    _applications = [];
+    _currentSeekerId = userId.isEmpty ? null : userId;
+    _errorMessage = null;
+
+    if (userId.isNotEmpty) {
+      _seekerSub = _applicationRepository.getSeekerApplications(userId).listen((
+        list,
+      ) {
+        _asSeeker = list;
+        _mergeStreams();
+      }, onError: _onStreamError);
+      _posterSub = _applicationRepository.getPosterApplications(userId).listen((
+        list,
+      ) {
+        _asPoster = list;
+        _mergeStreams();
+      }, onError: _onStreamError);
+    }
+    notifyListeners();
+  }
+
+  void _mergeStreams() {
+    final byId = <String, JobApplication>{
+      for (final a in _asPoster) a.id: a,
+      for (final a in _asSeeker) a.id: a,
+    };
+    _applications = byId.values.toList()
+      ..sort((a, b) => b.appliedAt.compareTo(a.appliedAt));
+    _localStorageService.saveApplications(_applications);
+    notifyListeners();
+  }
+
+  void _onStreamError(Object e) {
+    debugPrint('ApplicationProvider stream error: $e');
+    _errorMessage = 'Could not load applications.';
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _seekerSub?.cancel();
+    _posterSub?.cancel();
+    super.dispose();
   }
 
   // ---------------------------------------------------------------------------
@@ -146,6 +211,11 @@ class ApplicationProvider with ChangeNotifier {
       await _applicationRepository.submitApplication(application);
     } catch (e) {
       debugPrint('ApplicationProvider.submitApplication repository error: $e');
+      _applications.removeWhere((a) => a.id == application.id);
+      await _localStorageService.saveApplications(_applications);
+      _errorMessage = 'Could not submit the application. Please try again.';
+      notifyListeners();
+      return false;
     }
 
     return true;
@@ -158,7 +228,8 @@ class ApplicationProvider with ChangeNotifier {
     final index = _applications.indexWhere((app) => app.id == applicationId);
     if (index == -1) return false;
 
-    _applications[index] = _applications[index].copyWith(status: status);
+    final previous = _applications[index];
+    _applications[index] = previous.copyWith(status: status);
     await _localStorageService.saveApplications(_applications);
     notifyListeners();
 
@@ -166,6 +237,11 @@ class ApplicationProvider with ChangeNotifier {
       await _applicationRepository.updateStatus(applicationId, status);
     } catch (e) {
       debugPrint('ApplicationProvider.updateApplicationStatus error: $e');
+      _applications[index] = previous;
+      await _localStorageService.saveApplications(_applications);
+      _errorMessage = 'Could not update the application.';
+      notifyListeners();
+      return false;
     }
 
     return true;

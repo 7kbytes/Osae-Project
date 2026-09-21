@@ -22,12 +22,13 @@ class JobProvider with ChangeNotifier {
   JobProvider({
     JobRepository? jobRepository,
     LocalStorageService? localStorageService,
-  })  : _jobRepository = jobRepository ??
-            (FirebaseService.isInitialized
-                ? FirestoreJobRepository()
-                : InMemoryJobRepository()),
-        _localStorageService =
-            localStorageService ?? LocalStorageService.instance {
+  }) : _jobRepository =
+           jobRepository ??
+           (FirebaseService.isInitialized
+               ? FirestoreJobRepository()
+               : InMemoryJobRepository()),
+       _localStorageService =
+           localStorageService ?? LocalStorageService.instance {
     _initData();
   }
 
@@ -36,7 +37,8 @@ class JobProvider with ChangeNotifier {
     final cachedJobs = _localStorageService.getJobs();
     if (cachedJobs.isNotEmpty) {
       _jobs = List.from(cachedJobs);
-    } else {
+    } else if (!FirebaseService.isInitialized) {
+      // Demo/test data only; never shown against a real backend.
       _jobs = List.from(MockData.initialJobs);
       _localStorageService.saveJobs(_jobs);
     }
@@ -49,7 +51,8 @@ class JobProvider with ChangeNotifier {
     // Subscribe to repository stream for live updates
     _jobsSubscription?.cancel();
     _jobsSubscription = _jobRepository.getJobsStream().listen((updatedJobs) {
-      if (updatedJobs.isNotEmpty) {
+      // Against Firestore an empty list is real (e.g. the last job was deleted).
+      if (updatedJobs.isNotEmpty || FirebaseService.isInitialized) {
         _jobs = List.from(updatedJobs);
         _localStorageService.saveJobs(_jobs);
         notifyListeners();
@@ -71,7 +74,8 @@ class JobProvider with ChangeNotifier {
       final matchesCategory =
           _selectedCategory == 'All' || job.category == _selectedCategory;
       final queryLower = _searchQuery.toLowerCase();
-      final matchesSearch = _searchQuery.isEmpty ||
+      final matchesSearch =
+          _searchQuery.isEmpty ||
           job.title.toLowerCase().contains(queryLower) ||
           job.description.toLowerCase().contains(queryLower) ||
           job.locationName.toLowerCase().contains(queryLower);
@@ -106,7 +110,15 @@ class JobProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> toggleFavorite(String jobId, {String userId = 'usr_default_01'}) async {
+  String? _lastError;
+
+  /// Reason the last write to the backend failed, if any.
+  String? get lastError => _lastError;
+
+  Future<void> toggleFavorite(
+    String jobId, {
+    String userId = 'usr_default_01',
+  }) async {
     if (_favoriteJobIds.contains(jobId)) {
       _favoriteJobIds.remove(jobId);
     } else {
@@ -115,22 +127,37 @@ class JobProvider with ChangeNotifier {
     await _localStorageService.saveFavorites(_favoriteJobIds);
     notifyListeners();
 
+    if (userId.isEmpty) return;
     try {
       await _jobRepository.toggleFavorite(userId, jobId);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('toggleFavorite failed: $e');
+    }
   }
 
-  Future<void> addJob(JobPost job) async {
+  /// Adds a job. Returns false (and rolls the local change back) if the
+  /// backend rejected the write, so the UI never shows a job that isn't saved.
+  Future<bool> addJob(JobPost job) async {
+    _lastError = null;
     _jobs.insert(0, job);
     await _localStorageService.saveJobs(_jobs);
     notifyListeners();
 
     try {
       await _jobRepository.addJob(job);
-    } catch (_) {}
+      return true;
+    } catch (e) {
+      debugPrint('addJob failed: $e');
+      _jobs.removeWhere((j) => j.id == job.id);
+      await _localStorageService.saveJobs(_jobs);
+      _lastError = 'Could not save the job. Please try again.';
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<void> deleteJob(String jobId) async {
+    final removedJob = _jobs.where((j) => j.id == jobId).firstOrNull;
     _jobs.removeWhere((j) => j.id == jobId);
     _favoriteJobIds.remove(jobId);
     await _localStorageService.saveJobs(_jobs);
@@ -139,26 +166,42 @@ class JobProvider with ChangeNotifier {
 
     try {
       await _jobRepository.deleteJob(jobId);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('deleteJob failed: $e');
+      if (removedJob != null) {
+        _jobs.insert(0, removedJob);
+        await _localStorageService.saveJobs(_jobs);
+        _lastError = 'Could not delete the job.';
+        notifyListeners();
+      }
+    }
   }
 
   Future<void> updateJob(JobPost job) async {
     final index = _jobs.indexWhere((j) => j.id == job.id);
     if (index != -1) {
+      final previous = _jobs[index];
       _jobs[index] = job;
       await _localStorageService.saveJobs(_jobs);
       notifyListeners();
 
       try {
         await _jobRepository.updateJob(job);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('updateJob failed: $e');
+        _jobs[index] = previous;
+        await _localStorageService.saveJobs(_jobs);
+        _lastError = 'Could not update the job.';
+        notifyListeners();
+      }
     }
   }
 
   Future<void> updateJobStatus(String jobId, JobStatus status) async {
     final index = _jobs.indexWhere((j) => j.id == jobId);
     if (index != -1) {
-      _jobs[index] = _jobs[index].copyWith(
+      final previous = _jobs[index];
+      _jobs[index] = previous.copyWith(
         status: status,
         isFilled: status != JobStatus.open,
       );
@@ -167,7 +210,13 @@ class JobProvider with ChangeNotifier {
 
       try {
         await _jobRepository.updateJob(_jobs[index]);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('updateJobStatus failed: $e');
+        _jobs[index] = previous;
+        await _localStorageService.saveJobs(_jobs);
+        _lastError = 'Could not update the job.';
+        notifyListeners();
+      }
     }
   }
 

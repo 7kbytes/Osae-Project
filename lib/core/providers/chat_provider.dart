@@ -9,25 +9,29 @@ class ChatProvider with ChangeNotifier {
   final ChatRepository _chatRepository;
   final LocalStorageService _localStorageService;
   StreamSubscription<List<ChatRoom>>? _roomsSubscription;
-  final Map<String, StreamSubscription<List<ChatMessage>>> _messageSubscriptions = {};
+  final Map<String, StreamSubscription<List<ChatMessage>>>
+  _messageSubscriptions = {};
 
   final Map<String, List<ChatMessage>> _messagesPerRoom = {};
   List<ChatRoom> _rooms = [];
+  String _currentUserId = '';
 
   ChatProvider({
     ChatRepository? chatRepository,
     LocalStorageService? localStorageService,
     String currentUserId = 'seeker_001',
-  })  : _chatRepository = chatRepository ??
-            (FirebaseService.isInitialized
-                ? FirestoreChatRepository()
-                : InMemoryChatRepository()),
-        _localStorageService =
-            localStorageService ?? LocalStorageService.instance {
+  }) : _chatRepository =
+           chatRepository ??
+           (FirebaseService.isInitialized
+               ? FirestoreChatRepository()
+               : InMemoryChatRepository()),
+       _localStorageService =
+           localStorageService ?? LocalStorageService.instance {
     _initData(currentUserId);
   }
 
   void _initData(String currentUserId) {
+    _currentUserId = currentUserId;
     final cachedRooms = _localStorageService.getChatRooms();
     if (cachedRooms.isNotEmpty) {
       _rooms = List.from(cachedRooms);
@@ -48,14 +52,35 @@ class ChatProvider with ChangeNotifier {
       _localStorageService.saveChatRooms(_rooms);
     }
 
+    _subscribeToRooms(currentUserId);
+  }
+
+  void _subscribeToRooms(String userId) {
     _roomsSubscription?.cancel();
-    _roomsSubscription = _chatRepository.getChatRoomsStream(currentUserId).listen((updatedRooms) {
-      if (updatedRooms.isNotEmpty) {
+    _roomsSubscription = _chatRepository.getChatRoomsStream(userId).listen((
+      updatedRooms,
+    ) {
+      // Against Firestore an empty list is real; offline/demo keeps the cache.
+      if (updatedRooms.isNotEmpty || FirebaseService.isInitialized) {
         _rooms = List.from(updatedRooms);
         _localStorageService.saveChatRooms(_rooms);
         notifyListeners();
       }
     });
+  }
+
+  /// Re-binds the provider to the signed-in user (called when auth changes).
+  void setCurrentUser(String userId) {
+    if (userId == _currentUserId) return;
+    _currentUserId = userId;
+    for (final s in _messageSubscriptions.values) {
+      s.cancel();
+    }
+    _messageSubscriptions.clear();
+    _messagesPerRoom.clear();
+    _rooms = [];
+    if (userId.isNotEmpty) _subscribeToRooms(userId);
+    notifyListeners();
   }
 
   List<ChatRoom> get rooms => List.unmodifiable(_rooms);
@@ -69,12 +94,13 @@ class ChatProvider with ChangeNotifier {
     }
 
     if (!_messageSubscriptions.containsKey(roomId)) {
-      _messageSubscriptions[roomId] =
-          _chatRepository.getMessagesStream(roomId).listen((messages) {
-        _messagesPerRoom[roomId] = List.from(messages);
-        _localStorageService.saveMessages(roomId, messages);
-        notifyListeners();
-      });
+      _messageSubscriptions[roomId] = _chatRepository
+          .getMessagesStream(roomId)
+          .listen((messages) {
+            _messagesPerRoom[roomId] = List.from(messages);
+            _localStorageService.saveMessages(roomId, messages);
+            notifyListeners();
+          });
     }
     return List.unmodifiable(_messagesPerRoom[roomId] ?? []);
   }
@@ -106,7 +132,7 @@ class ChatProvider with ChangeNotifier {
       return existingRoom.id;
     }
 
-    final newRoomId = 'chat_${DateTime.now().millisecondsSinceEpoch}';
+    final newRoomId = ChatRoom.idFor(jobId, seekerId);
     final newRoom = ChatRoom(
       id: newRoomId,
       jobId: jobId,
@@ -128,7 +154,7 @@ class ChatProvider with ChangeNotifier {
         text: 'Hello, I am interested in your job posting: $jobTitle.',
         timestamp: DateTime.now(),
         isRead: true,
-      )
+      ),
     ];
     _messagesPerRoom[newRoomId] = initialMsgs;
 

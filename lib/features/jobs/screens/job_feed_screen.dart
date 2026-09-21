@@ -59,7 +59,10 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
                   onChanged: (value) => jobProvider.setSearchQuery(value),
                   decoration: InputDecoration(
                     hintText: 'Search jobs near Circle, Kejetia, Tema...',
-                    prefixIcon: const Icon(Icons.search, color: AppTheme.primaryColor),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppTheme.primaryColor,
+                    ),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear),
@@ -98,8 +101,9 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
                         backgroundColor: Colors.white.withValues(alpha: 0.2),
                         labelStyle: TextStyle(
                           color: isSelected ? Colors.black : Colors.white,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                           fontSize: 13,
                         ),
                         shape: RoundedRectangleBorder(
@@ -141,8 +145,9 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
                     color: isSelected
                         ? AppTheme.primaryColor
                         : AppTheme.textMuted,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                     fontSize: 12,
                   ),
                 );
@@ -157,8 +162,11 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.search_off,
-                            size: 64, color: Colors.grey.shade400),
+                        Icon(
+                          Icons.search_off,
+                          size: 64,
+                          color: Colors.grey.shade400,
+                        ),
                         const SizedBox(height: 12),
                         const Text(
                           'No jobs found matching your criteria.',
@@ -171,7 +179,10 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
                         const SizedBox(height: 6),
                         const Text(
                           'Try adjusting your city or search keywords.',
-                          style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.textMuted,
+                          ),
                         ),
                       ],
                     ),

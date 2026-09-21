@@ -3,9 +3,18 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class LocationService {
   // Preset Coordinates for Key Informal Market Hubs in Ghana
-  static const LatLng accraCenter = LatLng(5.5586, -0.2014); // Circle VIP / Kwame Nkrumah Overpass
-  static const LatLng kumasiCenter = LatLng(6.6961, -1.6234); // Kejetia Market Complex
-  static const LatLng temaCenter = LatLng(5.6424, 0.0050); // Community 1 Main Market
+  static const LatLng accraCenter = LatLng(
+    5.5586,
+    -0.2014,
+  ); // Circle VIP / Kwame Nkrumah Overpass
+  static const LatLng kumasiCenter = LatLng(
+    6.6961,
+    -1.6234,
+  ); // Kejetia Market Complex
+  static const LatLng temaCenter = LatLng(
+    5.6424,
+    0.0050,
+  ); // Community 1 Main Market
 
   /// Calculates the distance between two coordinates in kilometers.
   static double calculateDistanceKm({

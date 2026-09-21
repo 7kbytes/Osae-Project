@@ -69,6 +69,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = false);
 
+    if (!success && mounted) _showError(authProvider.lastError);
+
     if (success && mounted) {
       Navigator.pushReplacement(
         context,
@@ -77,11 +79,20 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _showError(String? message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message ?? 'Something went wrong. Please try again.'),
+      ),
+    );
+  }
+
   void _handleGoogleSignIn() async {
     setState(() => _isLoading = true);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final success = await authProvider.signInWithGoogle();
     setState(() => _isLoading = false);
+    if (!success && mounted) _showError(authProvider.lastError);
 
     if (success && mounted) {
       Navigator.pushReplacement(
@@ -207,7 +218,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         labelText: 'Full Name',
                         prefixIcon: Icon(Icons.person_outline),
                       ),
-                      validator: (val) => FormValidators.validateRequired(val, 'Full Name', minLength: 2),
+                      validator: (val) => FormValidators.validateRequired(
+                        val,
+                        'Full Name',
+                        minLength: 2,
+                      ),
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
@@ -218,7 +233,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         hintText: '+233 24 000 0000',
                         prefixIcon: Icon(Icons.phone_outlined),
                       ),
-                      validator: (val) => FormValidators.validateGhanaPhone(val),
+                      validator: (val) =>
+                          FormValidators.validateGhanaPhone(val),
                     ),
                     const SizedBox(height: 14),
                     Row(
@@ -233,11 +249,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             items: const [
                               DropdownMenuItem(
                                 value: UserRole.seeker,
-                                child: Text('Job Seeker', overflow: TextOverflow.ellipsis),
+                                child: Text(
+                                  'Job Seeker',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                               DropdownMenuItem(
                                 value: UserRole.poster,
-                                child: Text('Employer', overflow: TextOverflow.ellipsis),
+                                child: Text(
+                                  'Employer',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ],
                             onChanged: (val) =>
@@ -253,8 +275,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               labelText: 'City',
                             ),
                             items: _cities
-                                .map((c) =>
-                                    DropdownMenuItem(value: c, child: Text(c, overflow: TextOverflow.ellipsis)))
+                                .map(
+                                  (c) => DropdownMenuItem(
+                                    value: c,
+                                    child: Text(
+                                      c,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                )
                                 .toList(),
                             onChanged: (val) =>
                                 setState(() => _selectedCity = val!),

@@ -65,9 +65,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
         ),
         Expanded(
           child: jobs.isEmpty
-              ? const Center(
-                  child: Text('No jobs available in this location.'),
-                )
+              ? const Center(child: Text('No jobs available in this location.'))
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: jobs.length,
@@ -103,9 +101,7 @@ class _MapViewScreenState extends State<MapViewScreen> {
     }).toSet();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Map Explorer'),
-      ),
+      appBar: AppBar(title: const Text('Map Explorer')),
       body: GlobalErrorBoundary(
         errorBuilder: (context, details, retry) {
           return _buildMapFallback(jobs);
@@ -135,7 +131,9 @@ class _MapViewScreenState extends State<MapViewScreen> {
                     right: 16,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(25),
@@ -160,8 +158,9 @@ class _MapViewScreenState extends State<MapViewScreen> {
                             },
                             selectedColor: AppTheme.primaryColor,
                             labelStyle: TextStyle(
-                              color:
-                                  isSelected ? Colors.white : AppTheme.textDark,
+                              color: isSelected
+                                  ? Colors.white
+                                  : AppTheme.textDark,
                               fontWeight: isSelected
                                   ? FontWeight.bold
                                   : FontWeight.normal,
@@ -219,7 +218,9 @@ class _MapViewScreenState extends State<MapViewScreen> {
                             Text(
                               '${_selectedJob!.locationName} (${_selectedJob!.city})',
                               style: const TextStyle(
-                                  fontSize: 13, color: AppTheme.textMuted),
+                                fontSize: 13,
+                                color: AppTheme.textMuted,
+                              ),
                             ),
                             const SizedBox(height: 10),
                             Row(
@@ -239,7 +240,8 @@ class _MapViewScreenState extends State<MapViewScreen> {
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) => JobDetailScreen(
-                                            jobId: _selectedJob!.id),
+                                          jobId: _selectedJob!.id,
+                                        ),
                                       ),
                                     );
                                   },

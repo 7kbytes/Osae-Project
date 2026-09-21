@@ -20,7 +20,10 @@ void main() {
 
       final messages = chatProvider.getMessages('chat_101');
       expect(messages.length, 3);
-      expect(messages.first.text, 'Hello Kofi, are you available today at Circle VIP terminal?');
+      expect(
+        messages.first.text,
+        'Hello Kofi, are you available today at Circle VIP terminal?',
+      );
     });
 
     test('getOrCreateRoom returns existing room without duplicate', () {
@@ -58,7 +61,10 @@ void main() {
 
       final roomMessages = chatProvider.getMessages(newRoomId);
       expect(roomMessages.length, 1);
-      expect(roomMessages.first.text.contains('Store Attendant in Kumasi'), true);
+      expect(
+        roomMessages.first.text.contains('Store Attendant in Kumasi'),
+        true,
+      );
     });
 
     test('sendMessage appends message and updates room metadata', () {
@@ -74,7 +80,10 @@ void main() {
 
       final updatedMessages = chatProvider.getMessages(roomId);
       expect(updatedMessages.length, initialMessagesCount + 1);
-      expect(updatedMessages.last.text, 'I am right at the gate near Container 14.');
+      expect(
+        updatedMessages.last.text,
+        'I am right at the gate near Container 14.',
+      );
 
       final room = chatProvider.rooms.firstWhere((r) => r.id == roomId);
       expect(room.lastMessage, 'I am right at the gate near Container 14.');

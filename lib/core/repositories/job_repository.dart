@@ -4,7 +4,11 @@ import '../models/job_model.dart';
 import '../services/mock_data.dart';
 
 abstract class JobRepository {
-  Stream<List<JobPost>> getJobsStream({String? city, String? category, String? search});
+  Stream<List<JobPost>> getJobsStream({
+    String? city,
+    String? category,
+    String? search,
+  });
   Future<List<JobPost>> getJobs({String? city, String? category});
   Future<JobPost?> getJobById(String jobId);
   Future<void> addJob(JobPost job);
@@ -20,7 +24,7 @@ class FirestoreJobRepository implements JobRepository {
   final FirebaseFirestore _firestore;
 
   FirestoreJobRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _jobsCollection =>
       _firestore.collection('jobs');
@@ -31,7 +35,10 @@ class FirestoreJobRepository implements JobRepository {
     String? category,
     String? search,
   }) {
-    Query<Map<String, dynamic>> query = _jobsCollection.orderBy('createdAt', descending: true);
+    Query<Map<String, dynamic>> query = _jobsCollection.orderBy(
+      'createdAt',
+      descending: true,
+    );
 
     if (city != null && city != 'All' && city.isNotEmpty) {
       query = query.where('city', isEqualTo: city);
@@ -41,7 +48,9 @@ class FirestoreJobRepository implements JobRepository {
     }
 
     return query.snapshots().map((snapshot) {
-      var list = snapshot.docs.map((doc) => JobPost.fromMap(doc.data(), doc.id)).toList();
+      var list = snapshot.docs
+          .map((doc) => JobPost.fromMap(doc.data(), doc.id))
+          .toList();
       if (search != null && search.trim().isNotEmpty) {
         final queryLower = search.trim().toLowerCase();
         list = list.where((job) {
@@ -56,7 +65,10 @@ class FirestoreJobRepository implements JobRepository {
 
   @override
   Future<List<JobPost>> getJobs({String? city, String? category}) async {
-    Query<Map<String, dynamic>> query = _jobsCollection.orderBy('createdAt', descending: true);
+    Query<Map<String, dynamic>> query = _jobsCollection.orderBy(
+      'createdAt',
+      descending: true,
+    );
     if (city != null && city != 'All' && city.isNotEmpty) {
       query = query.where('city', isEqualTo: city);
     }
@@ -64,7 +76,9 @@ class FirestoreJobRepository implements JobRepository {
       query = query.where('category', isEqualTo: category);
     }
     final snapshot = await query.get();
-    return snapshot.docs.map((doc) => JobPost.fromMap(doc.data(), doc.id)).toList();
+    return snapshot.docs
+        .map((doc) => JobPost.fromMap(doc.data(), doc.id))
+        .toList();
   }
 
   @override
@@ -173,7 +187,8 @@ class InMemoryJobRepository implements JobRepository {
         final matchesCity = city == null || city == 'All' || job.city == city;
         final matchesCategory =
             category == null || category == 'All' || job.category == category;
-        final matchesSearch = search == null ||
+        final matchesSearch =
+            search == null ||
             search.trim().isEmpty ||
             job.title.toLowerCase().contains(search.toLowerCase()) ||
             job.description.toLowerCase().contains(search.toLowerCase()) ||

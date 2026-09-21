@@ -154,7 +154,11 @@ class JobDetailScreen extends StatelessWidget {
                       prefixIcon: Icon(Icons.person),
                       border: OutlineInputBorder(),
                     ),
-                    validator: (val) => FormValidators.validateRequired(val, 'Full Name', minLength: 2),
+                    validator: (val) => FormValidators.validateRequired(
+                      val,
+                      'Full Name',
+                      minLength: 2,
+                    ),
                   ),
                   const SizedBox(height: 14),
                   TextFormField(
@@ -202,9 +206,15 @@ class JobDetailScreen extends StatelessWidget {
                             jobTitle: job.title,
                             employerId: job.posterId,
                             applicantId: applicantId,
-                            applicantName: InputSanitizer.sanitize(nameController.text),
-                            applicantPhone: InputSanitizer.sanitizePhone(phoneController.text),
-                            coverNote: InputSanitizer.sanitize(noteController.text),
+                            applicantName: InputSanitizer.sanitize(
+                              nameController.text,
+                            ),
+                            applicantPhone: InputSanitizer.sanitizePhone(
+                              phoneController.text,
+                            ),
+                            coverNote: InputSanitizer.sanitize(
+                              noteController.text,
+                            ),
                           );
                           if (sheetContext.mounted) {
                             Navigator.pop(sheetContext);
@@ -217,8 +227,9 @@ class JobDetailScreen extends StatelessWidget {
                                       ? 'Application submitted successfully!'
                                       : 'You have already applied for this job.',
                                 ),
-                                backgroundColor:
-                                    success ? Colors.green : Colors.orange,
+                                backgroundColor: success
+                                    ? Colors.green
+                                    : Colors.orange,
                               ),
                             );
                           }
@@ -245,7 +256,7 @@ class JobDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final jobProvider = Provider.of<JobProvider>(context);
-    
+
     ApplicationProvider? applicationProvider;
     try {
       applicationProvider = Provider.of<ApplicationProvider>(context);
@@ -275,9 +286,7 @@ class JobDetailScreen extends StatelessWidget {
 
     if (matchingJob == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Job Details'),
-        ),
+        appBar: AppBar(title: const Text('Job Details')),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -298,10 +307,7 @@ class JobDetailScreen extends StatelessWidget {
                 const Text(
                   'This job listing is no longer available or does not exist.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textMuted,
-                  ),
+                  style: TextStyle(fontSize: 14, color: AppTheme.textMuted),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
@@ -327,8 +333,10 @@ class JobDetailScreen extends StatelessWidget {
     final isSeeker = jobProvider.currentUserRole == UserRole.seeker;
     final hasApplied =
         applicationProvider?.hasApplied(job.id, currentUserId) ?? false;
-    final existingApp =
-        applicationProvider?.getApplication(job.id, currentUserId);
+    final existingApp = applicationProvider?.getApplication(
+      job.id,
+      currentUserId,
+    );
     final jobApplicants =
         applicationProvider?.getApplicationsForJob(job.id) ?? [];
 
@@ -367,7 +375,10 @@ class JobDetailScreen extends StatelessWidget {
               isFav ? Icons.favorite : Icons.favorite_border,
               color: isFav ? AppTheme.secondaryColor : Colors.white,
             ),
-            onPressed: () => jobProvider.toggleFavorite(job.id),
+            onPressed: () => jobProvider.toggleFavorite(
+              job.id,
+              userId: currentUser?.id ?? '',
+            ),
           ),
         ],
       ),
@@ -399,14 +410,17 @@ class JobDetailScreen extends StatelessWidget {
                       children: [
                         Chip(
                           label: Text(job.category),
-                          backgroundColor:
-                              AppTheme.primaryColor.withValues(alpha: 0.12),
+                          backgroundColor: AppTheme.primaryColor.withValues(
+                            alpha: 0.12,
+                          ),
                           side: BorderSide.none,
                         ),
                         const Spacer(),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: statusBadgeBg,
                             borderRadius: BorderRadius.circular(8),
@@ -435,8 +449,11 @@ class JobDetailScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        const Icon(Icons.location_on,
-                            color: AppTheme.primaryColor, size: 20),
+                        const Icon(
+                          Icons.location_on,
+                          color: AppTheme.primaryColor,
+                          size: 20,
+                        ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -534,10 +551,14 @@ class JobDetailScreen extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 24,
-                      backgroundColor:
-                          AppTheme.primaryColor.withValues(alpha: 0.1),
-                      child: const Icon(Icons.store,
-                          color: AppTheme.primaryColor, size: 28),
+                      backgroundColor: AppTheme.primaryColor.withValues(
+                        alpha: 0.1,
+                      ),
+                      child: const Icon(
+                        Icons.store,
+                        color: AppTheme.primaryColor,
+                        size: 28,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -580,16 +601,14 @@ class JobDetailScreen extends StatelessWidget {
                       color: _getApplicationBgColor(existingApp?.status),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color:
-                            _getApplicationBorderColor(existingApp?.status),
+                        color: _getApplicationBorderColor(existingApp?.status),
                       ),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           _getApplicationIcon(existingApp?.status),
-                          color:
-                              _getApplicationTextColor(existingApp?.status),
+                          color: _getApplicationTextColor(existingApp?.status),
                           size: 28,
                         ),
                         const SizedBox(width: 12),
@@ -635,12 +654,12 @@ class JobDetailScreen extends StatelessWidget {
                       onPressed: job.status == JobStatus.completed
                           ? null
                           : () => _showApplyBottomSheet(
-                                context,
-                                job: job,
-                                applicantId: currentUserId,
-                                defaultName: currentUserName,
-                                defaultPhone: currentUserPhone,
-                              ),
+                              context,
+                              job: job,
+                              applicantId: currentUserId,
+                              defaultName: currentUserName,
+                              defaultPhone: currentUserPhone,
+                            ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
                         foregroundColor: Colors.white,
@@ -664,7 +683,8 @@ class JobDetailScreen extends StatelessWidget {
                   height: 52,
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      final roomId = chatProvider?.getOrCreateRoom(
+                      final roomId =
+                          chatProvider?.getOrCreateRoom(
                             jobId: job.id,
                             jobTitle: job.title,
                             seekerId: currentUserId,
@@ -741,8 +761,10 @@ class JobDetailScreen extends StatelessWidget {
                       const SizedBox(height: 6),
                       const Text(
                         'Update the current status of this gig listing:',
-                        style:
-                            TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.textMuted,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Wrap(
@@ -761,7 +783,9 @@ class JobDetailScreen extends StatelessWidget {
                                   job.id,
                                   JobStatus.open,
                                 );
-                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                ScaffoldMessenger.of(
+                                  context,
+                                ).hideCurrentSnackBar();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text('Job status set to Open'),
@@ -782,11 +806,14 @@ class JobDetailScreen extends StatelessWidget {
                                   job.id,
                                   JobStatus.inProgress,
                                 );
-                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                ScaffoldMessenger.of(
+                                  context,
+                                ).hideCurrentSnackBar();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content:
-                                        Text('Job status set to In Progress'),
+                                    content: Text(
+                                      'Job status set to In Progress',
+                                    ),
                                   ),
                                 );
                               }
@@ -794,8 +821,10 @@ class JobDetailScreen extends StatelessWidget {
                           ),
                           ChoiceChip(
                             key: const Key('job_status_completed'),
-                            avatar: const Icon(Icons.check_circle_outline,
-                                size: 16),
+                            avatar: const Icon(
+                              Icons.check_circle_outline,
+                              size: 16,
+                            ),
                             label: const Text('Completed'),
                             selected: job.status == JobStatus.completed,
                             selectedColor: Colors.blue.shade100,
@@ -805,11 +834,14 @@ class JobDetailScreen extends StatelessWidget {
                                   job.id,
                                   JobStatus.completed,
                                 );
-                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                ScaffoldMessenger.of(
+                                  context,
+                                ).hideCurrentSnackBar();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content:
-                                        Text('Job status set to Completed'),
+                                    content: Text(
+                                      'Job status set to Completed',
+                                    ),
                                   ),
                                 );
                               }

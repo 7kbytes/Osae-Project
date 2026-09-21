@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze:*)",
+      "Bash(flutter test:*)",
+      "Bash(flutter pub get)",
+      "Bash(dart format:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ],
+        "deny": [
+      "Read(./firebase-service-account.json)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./**/*service-account*.json)",
+      "Bash(git push --force:*)"
+    ],
+    "ask": [
+      "Bash(firebase deploy:*)"
+    ]
+
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{const p=JSON.parse(d).tool_input.file_path||'';if(p.endsWith('.dart'))require('child_process').spawnSync('dart',['format',p],{stdio:'ignore',shell:true})}catch(e){}})\""
+          }
+        ]
+      }
+    ]
+  }
+}

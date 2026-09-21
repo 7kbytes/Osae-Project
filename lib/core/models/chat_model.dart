@@ -70,11 +70,14 @@ class ChatMessage {
   int get hashCode => id.hashCode ^ senderId.hashCode ^ text.hashCode;
 
   @override
-  String toString() =>
-      'ChatMessage(id: $id, sender: $senderName, text: $text)';
+  String toString() => 'ChatMessage(id: $id, sender: $senderName, text: $text)';
 }
 
 class ChatRoom {
+  /// Deterministic room id for a (job, seeker) pair.
+  static String idFor(String jobId, String seekerId) =>
+      'chat_${jobId}_$seekerId';
+
   final String id;
   final String jobId;
   final String jobTitle;

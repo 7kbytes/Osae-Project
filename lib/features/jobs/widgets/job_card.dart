@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../app/theme.dart';
 import '../../../core/models/job_model.dart';
+import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/job_provider.dart';
 import '../screens/job_detail_screen.dart';
 
@@ -33,9 +34,7 @@ class JobCard extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => JobDetailScreen(jobId: job.id),
-            ),
+            MaterialPageRoute(builder: (_) => JobDetailScreen(jobId: job.id)),
           );
         },
         child: Padding(
@@ -48,8 +47,10 @@ class JobCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -75,11 +76,18 @@ class JobCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       GestureDetector(
                         onTap: () {
-                          jobProvider.toggleFavorite(job.id);
+                          jobProvider.toggleFavorite(
+                            job.id,
+                            userId:
+                                context.read<AuthProvider>().currentUser?.id ??
+                                '',
+                          );
                         },
                         child: Icon(
                           isFav ? Icons.favorite : Icons.favorite_border,
-                          color: isFav ? AppTheme.accentColor : AppTheme.textMuted,
+                          color: isFav
+                              ? AppTheme.accentColor
+                              : AppTheme.textMuted,
                           size: 22,
                         ),
                       ),
@@ -137,7 +145,8 @@ class JobCard extends StatelessWidget {
                     text: TextSpan(
                       children: [
                         TextSpan(
-                          text: '${job.currency} ${job.payRate.toStringAsFixed(0)} ',
+                          text:
+                              '${job.currency} ${job.payRate.toStringAsFixed(0)} ',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -156,7 +165,9 @@ class JobCard extends StatelessWidget {
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 6),
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.secondaryColor,
                       borderRadius: BorderRadius.circular(10),

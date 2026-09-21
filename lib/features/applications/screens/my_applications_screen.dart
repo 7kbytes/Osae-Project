@@ -43,13 +43,12 @@ class MyApplicationsScreen extends StatelessWidget {
     final jobProvider = Provider.of<JobProvider>(context, listen: false);
 
     final currentUserId = authProvider.currentUser?.id ?? 'seeker_001';
-    final applications =
-        applicationProvider.getApplicationsForSeeker(currentUserId);
+    final applications = applicationProvider.getApplicationsForSeeker(
+      currentUserId,
+    );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Applications'),
-      ),
+      appBar: AppBar(title: const Text('My Applications')),
       body: applications.isEmpty
           ? Center(
               child: Padding(
@@ -75,10 +74,7 @@ class MyApplicationsScreen extends StatelessWidget {
                     const Text(
                       'You have not submitted any job applications yet. Browse the job feed to find and apply for informal gig opportunities.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppTheme.textMuted,
-                      ),
+                      style: TextStyle(fontSize: 14, color: AppTheme.textMuted),
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton.icon(
@@ -106,8 +102,9 @@ class MyApplicationsScreen extends StatelessWidget {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(14),
                     onTap: () {
-                      final jobExists =
-                          jobProvider.allJobs.any((j) => j.id == app.jobId);
+                      final jobExists = jobProvider.allJobs.any(
+                        (j) => j.id == app.jobId,
+                      );
                       if (jobExists) {
                         Navigator.push(
                           context,
@@ -171,9 +168,7 @@ class MyApplicationsScreen extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: Colors.grey.shade50,
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: Colors.grey.shade200,
-                                ),
+                                border: Border.all(color: Colors.grey.shade200),
                               ),
                               child: Text(
                                 'Note: "${app.note}"',
@@ -206,23 +201,20 @@ class MyApplicationsScreen extends StatelessWidget {
                               const Spacer(),
                               TextButton.icon(
                                 onPressed: () {
-                                  final jobExists = jobProvider.allJobs
-                                      .any((j) => j.id == app.jobId);
+                                  final jobExists = jobProvider.allJobs.any(
+                                    (j) => j.id == app.jobId,
+                                  );
                                   if (jobExists) {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (_) => JobDetailScreen(
-                                          jobId: app.jobId,
-                                        ),
+                                        builder: (_) =>
+                                            JobDetailScreen(jobId: app.jobId),
                                       ),
                                     );
                                   }
                                 },
-                                icon: const Icon(
-                                  Icons.arrow_forward,
-                                  size: 14,
-                                ),
+                                icon: const Icon(Icons.arrow_forward, size: 14),
                                 label: const Text('View Job'),
                                 style: TextButton.styleFrom(
                                   padding: EdgeInsets.zero,

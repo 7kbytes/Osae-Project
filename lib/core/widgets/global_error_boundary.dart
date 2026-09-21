@@ -8,7 +8,12 @@ import '../../features/navigation/main_navigation_screen.dart';
 /// and "Go Home" actions.
 class GlobalErrorBoundary extends StatefulWidget {
   final Widget child;
-  final Widget Function(BuildContext context, FlutterErrorDetails? details, VoidCallback retry)? errorBuilder;
+  final Widget Function(
+    BuildContext context,
+    FlutterErrorDetails? details,
+    VoidCallback retry,
+  )?
+  errorBuilder;
   final void Function(Object error, StackTrace stack)? onError;
 
   const GlobalErrorBoundary({
@@ -30,7 +35,10 @@ class GlobalErrorBoundaryState extends State<GlobalErrorBoundary> {
     setState(() {
       _errorDetails = details;
     });
-    widget.onError?.call(details.exception, details.stack ?? StackTrace.current);
+    widget.onError?.call(
+      details.exception,
+      details.stack ?? StackTrace.current,
+    );
   }
 
   /// Clear the error and trigger a full rebuild of the child widget tree.
@@ -95,7 +103,10 @@ class _GlobalErrorDisplayState extends State<GlobalErrorDisplay> {
       child: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 32.0,
+            ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -176,7 +187,9 @@ class _GlobalErrorDisplayState extends State<GlobalErrorDisplay> {
                           key: const Key('global_error_home_button'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.primaryColor,
-                            side: const BorderSide(color: AppTheme.primaryColor),
+                            side: const BorderSide(
+                              color: AppTheme.primaryColor,
+                            ),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -212,8 +225,13 @@ class _GlobalErrorDisplayState extends State<GlobalErrorDisplay> {
                       color: AppTheme.textMuted,
                     ),
                     label: Text(
-                      _showDetails ? 'Hide Error Details' : 'Show Error Details',
-                      style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                      _showDetails
+                          ? 'Hide Error Details'
+                          : 'Show Error Details',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
                   ),
                   if (_showDetails)

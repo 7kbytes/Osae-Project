@@ -42,7 +42,10 @@ void main() {
       final now = DateTime.now();
       final ts = Timestamp.fromDate(now);
       final parsed = parseDateTime(ts);
-      expect(parsed.millisecondsSinceEpoch ~/ 1000, now.millisecondsSinceEpoch ~/ 1000);
+      expect(
+        parsed.millisecondsSinceEpoch ~/ 1000,
+        now.millisecondsSinceEpoch ~/ 1000,
+      );
     });
   });
 
@@ -146,7 +149,10 @@ void main() {
       final deserialized = JobPost.fromMap(map, 'job_001');
       expect(deserialized.id, 'job_001');
       expect(deserialized.title, 'Masonry Helper');
-      expect(deserialized.description, 'Need skilled assistant for site work at Circle');
+      expect(
+        deserialized.description,
+        'Need skilled assistant for site work at Circle',
+      );
       expect(deserialized.category, 'Construction & Labor');
       expect(deserialized.payRate, 180.0);
       expect(deserialized.payUnit, 'per day');
@@ -206,65 +212,71 @@ void main() {
       expect(updated.city, 'Tema');
     });
 
-    test('JobStatus enum serialization, deserialization, and compatibility', () {
-      final jobOpen = JobPost(
-        id: 'job_status_01',
-        title: 'Painter',
-        description: 'Paint compound wall',
-        category: 'Construction',
-        payRate: 150.0,
-        city: 'Accra',
-        locationName: 'Madina',
-        latitude: 5.67,
-        longitude: -0.16,
-        posterId: 'poster_01',
-        posterName: 'Ama',
-        posterPhone: '0241112222',
-        status: JobStatus.open,
-        createdAt: DateTime(2026, 8, 29),
-      );
+    test(
+      'JobStatus enum serialization, deserialization, and compatibility',
+      () {
+        final jobOpen = JobPost(
+          id: 'job_status_01',
+          title: 'Painter',
+          description: 'Paint compound wall',
+          category: 'Construction',
+          payRate: 150.0,
+          city: 'Accra',
+          locationName: 'Madina',
+          latitude: 5.67,
+          longitude: -0.16,
+          posterId: 'poster_01',
+          posterName: 'Ama',
+          posterPhone: '0241112222',
+          status: JobStatus.open,
+          createdAt: DateTime(2026, 8, 29),
+        );
 
-      final openMap = jobOpen.toMap();
-      expect(openMap['status'], 'open');
-      expect(openMap['isFilled'], false);
+        final openMap = jobOpen.toMap();
+        expect(openMap['status'], 'open');
+        expect(openMap['isFilled'], false);
 
-      final inProgressJob = jobOpen.copyWith(status: JobStatus.inProgress);
-      expect(inProgressJob.status, JobStatus.inProgress);
-      expect(inProgressJob.isFilled, true);
-      expect(inProgressJob.toMap()['status'], 'inProgress');
-      expect(inProgressJob.toMap()['isFilled'], true);
+        final inProgressJob = jobOpen.copyWith(status: JobStatus.inProgress);
+        expect(inProgressJob.status, JobStatus.inProgress);
+        expect(inProgressJob.isFilled, true);
+        expect(inProgressJob.toMap()['status'], 'inProgress');
+        expect(inProgressJob.toMap()['isFilled'], true);
 
-      final completedJob = jobOpen.copyWith(status: JobStatus.completed);
-      expect(completedJob.status, JobStatus.completed);
-      expect(completedJob.isFilled, true);
+        final completedJob = jobOpen.copyWith(status: JobStatus.completed);
+        expect(completedJob.status, JobStatus.completed);
+        expect(completedJob.isFilled, true);
 
-      // Test JobStatus.fromString helper
-      expect(JobStatus.fromString('open'), JobStatus.open);
-      expect(JobStatus.fromString('inProgress'), JobStatus.inProgress);
-      expect(JobStatus.fromString('in_progress'), JobStatus.inProgress);
-      expect(JobStatus.fromString('completed'), JobStatus.completed);
-      expect(JobStatus.fromString('invalid'), JobStatus.open);
-      expect(JobStatus.fromString(null), JobStatus.open);
+        // Test JobStatus.fromString helper
+        expect(JobStatus.fromString('open'), JobStatus.open);
+        expect(JobStatus.fromString('inProgress'), JobStatus.inProgress);
+        expect(JobStatus.fromString('in_progress'), JobStatus.inProgress);
+        expect(JobStatus.fromString('completed'), JobStatus.completed);
+        expect(JobStatus.fromString('invalid'), JobStatus.open);
+        expect(JobStatus.fromString(null), JobStatus.open);
 
-      // Test deserialization with isFilled only (legacy data)
-      final legacyMapFilled = {
-        'title': 'Legacy Gig',
-        'isFilled': true,
-        'createdAt': '2026-08-29T00:00:00.000Z',
-      };
-      final parsedLegacyFilled = JobPost.fromMap(legacyMapFilled, 'legacy_01');
-      expect(parsedLegacyFilled.status, JobStatus.completed);
-      expect(parsedLegacyFilled.isFilled, true);
+        // Test deserialization with isFilled only (legacy data)
+        final legacyMapFilled = {
+          'title': 'Legacy Gig',
+          'isFilled': true,
+          'createdAt': '2026-08-29T00:00:00.000Z',
+        };
+        final parsedLegacyFilled = JobPost.fromMap(
+          legacyMapFilled,
+          'legacy_01',
+        );
+        expect(parsedLegacyFilled.status, JobStatus.completed);
+        expect(parsedLegacyFilled.isFilled, true);
 
-      final legacyMapOpen = {
-        'title': 'Legacy Open Gig',
-        'isFilled': false,
-        'createdAt': '2026-08-29T00:00:00.000Z',
-      };
-      final parsedLegacyOpen = JobPost.fromMap(legacyMapOpen, 'legacy_02');
-      expect(parsedLegacyOpen.status, JobStatus.open);
-      expect(parsedLegacyOpen.isFilled, false);
-    });
+        final legacyMapOpen = {
+          'title': 'Legacy Open Gig',
+          'isFilled': false,
+          'createdAt': '2026-08-29T00:00:00.000Z',
+        };
+        final parsedLegacyOpen = JobPost.fromMap(legacyMapOpen, 'legacy_02');
+        expect(parsedLegacyOpen.status, JobStatus.open);
+        expect(parsedLegacyOpen.isFilled, false);
+      },
+    );
   });
 
   group('ChatMessage & ChatRoom Model Tests', () {

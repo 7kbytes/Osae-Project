@@ -2,9 +2,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:local_job_connector/main.dart';
 
 void main() {
-  testWidgets('LocalJobConnector app loads and navigates through tabs',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(const LocalJobConnectorApp());
+  testWidgets('app starts on the login screen when not in demo mode', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const LocalJobConnectorApp(demo: false));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Jobs'), findsNothing); // no bottom navigation
+    expect(find.text('Continue with Google'), findsOneWidget);
+  });
+
+  testWidgets('LocalJobConnector app loads and navigates through tabs', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const LocalJobConnectorApp(demo: true));
     await tester.pumpAndSettle();
 
     // Verify main app title is rendered in JobFeed

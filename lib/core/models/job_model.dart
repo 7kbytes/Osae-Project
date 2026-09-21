@@ -86,12 +86,14 @@ class JobPost {
     bool? isFavorite,
     DateTime? createdAt,
   }) {
-    final effectiveStatus = status ??
+    final effectiveStatus =
+        status ??
         (isFilled != null
             ? (isFilled ? JobStatus.completed : JobStatus.open)
             : this.status);
     final effectiveIsFilled =
-        isFilled ?? (status != null ? (status != JobStatus.open) : this.isFilled);
+        isFilled ??
+        (status != null ? (status != JobStatus.open) : this.isFilled);
 
     return JobPost(
       id: id ?? this.id,

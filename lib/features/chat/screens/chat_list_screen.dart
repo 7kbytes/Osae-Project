@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../app/theme.dart';
+import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/chat_provider.dart';
 import 'chat_room_screen.dart';
 
@@ -12,18 +13,20 @@ class ChatListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final chatProvider = Provider.of<ChatProvider>(context);
     final rooms = chatProvider.rooms;
+    final myId = Provider.of<AuthProvider>(context).currentUser?.id ?? '';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Messages & Direct Chat'),
-      ),
+      appBar: AppBar(title: const Text('Messages & Direct Chat')),
       body: rooms.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.chat_bubble_outline,
-                      size: 64, color: Colors.grey.shade400),
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
                   const SizedBox(height: 12),
                   const Text(
                     'No active chats yet.',
@@ -46,17 +49,28 @@ class ChatListScreen extends StatelessWidget {
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final room = rooms[index];
+                // Show the other party: posters see the seeker and vice versa.
+                final otherName = room.posterId == myId
+                    ? room.seekerName
+                    : room.posterName;
                 return ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   leading: CircleAvatar(
                     radius: 24,
-                    backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.12),
-                    child: const Icon(Icons.person,
-                        color: AppTheme.primaryColor, size: 26),
+                    backgroundColor: AppTheme.primaryColor.withValues(
+                      alpha: 0.12,
+                    ),
+                    child: const Icon(
+                      Icons.person,
+                      color: AppTheme.primaryColor,
+                      size: 26,
+                    ),
                   ),
                   title: Text(
-                    room.posterName,
+                    otherName,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -100,7 +114,7 @@ class ChatListScreen extends StatelessWidget {
                         builder: (_) => ChatRoomScreen(
                           roomId: room.id,
                           jobTitle: room.jobTitle,
-                          otherUserName: room.posterName,
+                          otherUserName: otherName,
                         ),
                       ),
                     );

@@ -33,76 +33,82 @@ void main() {
       expect(provider.errorMessage, isNull);
     });
 
-    test('Hydrates applications from LocalStorageService on initialization', () {
-      final preloaded = [
-        JobApplication(
-          id: 'app_pre_1',
-          jobId: 'job_001',
-          jobTitle: 'Masonry Helper',
-          seekerId: 'seeker_001',
-          seekerName: 'Kofi Mensah',
-          seekerPhone: '+233 24 111 2222',
-          posterId: 'poster_001',
-          status: ApplicationStatus.pending,
-          note: 'Ready to work tomorrow',
-          appliedAt: DateTime(2026, 8, 28),
-        ),
-      ];
-      localStorageService.saveApplications(preloaded);
+    test(
+      'Hydrates applications from LocalStorageService on initialization',
+      () {
+        final preloaded = [
+          JobApplication(
+            id: 'app_pre_1',
+            jobId: 'job_001',
+            jobTitle: 'Masonry Helper',
+            seekerId: 'seeker_001',
+            seekerName: 'Kofi Mensah',
+            seekerPhone: '+233 24 111 2222',
+            posterId: 'poster_001',
+            status: ApplicationStatus.pending,
+            note: 'Ready to work tomorrow',
+            appliedAt: DateTime(2026, 8, 28),
+          ),
+        ];
+        localStorageService.saveApplications(preloaded);
 
-      final provider = ApplicationProvider(
-        applicationRepository: applicationRepository,
-        localStorageService: localStorageService,
-        initialSeekerId: 'seeker_001',
-      );
+        final provider = ApplicationProvider(
+          applicationRepository: applicationRepository,
+          localStorageService: localStorageService,
+          initialSeekerId: 'seeker_001',
+        );
 
-      expect(provider.applications.length, 1);
-      expect(provider.applications.first.id, 'app_pre_1');
-      expect(provider.myApplications.length, 1);
-      expect(provider.hasApplied('job_001', 'seeker_001'), true);
-      expect(provider.hasApplied('job_002', 'seeker_001'), false);
-    });
+        expect(provider.applications.length, 1);
+        expect(provider.applications.first.id, 'app_pre_1');
+        expect(provider.myApplications.length, 1);
+        expect(provider.hasApplied('job_001', 'seeker_001'), true);
+        expect(provider.hasApplied('job_002', 'seeker_001'), false);
+      },
+    );
 
-    test('submitApplication adds application, notifies, and persists to local storage', () async {
-      final provider = ApplicationProvider(
-        applicationRepository: applicationRepository,
-        localStorageService: localStorageService,
-      );
+    test(
+      'submitApplication adds application, notifies, and persists to local storage',
+      () async {
+        final provider = ApplicationProvider(
+          applicationRepository: applicationRepository,
+          localStorageService: localStorageService,
+        );
 
-      bool notified = false;
-      provider.addListener(() {
-        notified = true;
-      });
+        bool notified = false;
+        provider.addListener(() {
+          notified = true;
+        });
 
-      final success = await provider.submitApplication(
-        jobId: 'job_circle_01',
-        jobTitle: 'VIP Loading Assistant',
-        employerId: 'poster_accra_01',
-        applicantId: 'seeker_kwame',
-        applicantName: 'Kwame Osei',
-        applicantPhone: '+233 24 999 8888',
-        coverNote: 'Experienced loader at VIP terminal',
-      );
+        final success = await provider.submitApplication(
+          jobId: 'job_circle_01',
+          jobTitle: 'VIP Loading Assistant',
+          employerId: 'poster_accra_01',
+          applicantId: 'seeker_kwame',
+          applicantName: 'Kwame Osei',
+          applicantPhone: '+233 24 999 8888',
+          coverNote: 'Experienced loader at VIP terminal',
+        );
 
-      expect(success, true);
-      expect(notified, true);
-      expect(provider.applications.length, 1);
+        expect(success, true);
+        expect(notified, true);
+        expect(provider.applications.length, 1);
 
-      final app = provider.applications.first;
-      expect(app.jobId, 'job_circle_01');
-      expect(app.jobTitle, 'VIP Loading Assistant');
-      expect(app.seekerId, 'seeker_kwame');
-      expect(app.seekerName, 'Kwame Osei');
-      expect(app.seekerPhone, '+233 24 999 8888');
-      expect(app.posterId, 'poster_accra_01');
-      expect(app.status, ApplicationStatus.pending);
-      expect(app.note, 'Experienced loader at VIP terminal');
+        final app = provider.applications.first;
+        expect(app.jobId, 'job_circle_01');
+        expect(app.jobTitle, 'VIP Loading Assistant');
+        expect(app.seekerId, 'seeker_kwame');
+        expect(app.seekerName, 'Kwame Osei');
+        expect(app.seekerPhone, '+233 24 999 8888');
+        expect(app.posterId, 'poster_accra_01');
+        expect(app.status, ApplicationStatus.pending);
+        expect(app.note, 'Experienced loader at VIP terminal');
 
-      // Verify persistence in LocalStorageService
-      final persisted = localStorageService.getApplications();
-      expect(persisted.length, 1);
-      expect(persisted.first.id, app.id);
-    });
+        // Verify persistence in LocalStorageService
+        final persisted = localStorageService.getApplications();
+        expect(persisted.length, 1);
+        expect(persisted.first.id, app.id);
+      },
+    );
 
     test('Prevents duplicate submissions for same job and seeker', () async {
       final provider = ApplicationProvider(
@@ -137,63 +143,57 @@ void main() {
       expect(provider.applications.length, 1);
     });
 
-    test('updateApplicationStatus transitions status and persists changes', () async {
-      final provider = ApplicationProvider(
-        applicationRepository: applicationRepository,
-        localStorageService: localStorageService,
-      );
+    test(
+      'updateApplicationStatus transitions status and persists changes',
+      () async {
+        final provider = ApplicationProvider(
+          applicationRepository: applicationRepository,
+          localStorageService: localStorageService,
+        );
 
-      await provider.submitApplication(
-        applicationId: 'app_test_status',
-        jobId: 'job_market_01',
-        jobTitle: 'Produce Packer',
-        employerId: 'poster_market',
-        applicantId: 'seeker_yaw',
-        applicantName: 'Yaw Boateng',
-        applicantPhone: '+233 50 111 2222',
-        coverNote: 'Fast packer',
-      );
+        await provider.submitApplication(
+          applicationId: 'app_test_status',
+          jobId: 'job_market_01',
+          jobTitle: 'Produce Packer',
+          employerId: 'poster_market',
+          applicantId: 'seeker_yaw',
+          applicantName: 'Yaw Boateng',
+          applicantPhone: '+233 50 111 2222',
+          coverNote: 'Fast packer',
+        );
 
-      expect(
-        provider.applications.first.status,
-        ApplicationStatus.pending,
-      );
+        expect(provider.applications.first.status, ApplicationStatus.pending);
 
-      // Transition to Accepted
-      final acceptResult = await provider.updateApplicationStatus(
-        'app_test_status',
-        ApplicationStatus.accepted,
-      );
-      expect(acceptResult, true);
-      expect(
-        provider.applications.first.status,
-        ApplicationStatus.accepted,
-      );
+        // Transition to Accepted
+        final acceptResult = await provider.updateApplicationStatus(
+          'app_test_status',
+          ApplicationStatus.accepted,
+        );
+        expect(acceptResult, true);
+        expect(provider.applications.first.status, ApplicationStatus.accepted);
 
-      // Verify persisted state
-      expect(
-        localStorageService.getApplications().first.status,
-        ApplicationStatus.accepted,
-      );
+        // Verify persisted state
+        expect(
+          localStorageService.getApplications().first.status,
+          ApplicationStatus.accepted,
+        );
 
-      // Transition to Rejected
-      final rejectResult = await provider.updateApplicationStatus(
-        'app_test_status',
-        ApplicationStatus.rejected,
-      );
-      expect(rejectResult, true);
-      expect(
-        provider.applications.first.status,
-        ApplicationStatus.rejected,
-      );
+        // Transition to Rejected
+        final rejectResult = await provider.updateApplicationStatus(
+          'app_test_status',
+          ApplicationStatus.rejected,
+        );
+        expect(rejectResult, true);
+        expect(provider.applications.first.status, ApplicationStatus.rejected);
 
-      // Non-existent id returns false
-      final invalidResult = await provider.updateApplicationStatus(
-        'non_existent_app_id',
-        ApplicationStatus.completed,
-      );
-      expect(invalidResult, false);
-    });
+        // Non-existent id returns false
+        final invalidResult = await provider.updateApplicationStatus(
+          'non_existent_app_id',
+          ApplicationStatus.completed,
+        );
+        expect(invalidResult, false);
+      },
+    );
 
     test('getApplicationsForJob isolates applications by job ID', () async {
       final provider = ApplicationProvider(
@@ -282,40 +282,43 @@ void main() {
       expect(provider.myApplications.first.seekerId, 'seeker_other');
     });
 
-    test('Cold-restart hydration preserves application history across fresh provider instance', () async {
-      final provider1 = ApplicationProvider(
-        applicationRepository: applicationRepository,
-        localStorageService: localStorageService,
-      );
+    test(
+      'Cold-restart hydration preserves application history across fresh provider instance',
+      () async {
+        final provider1 = ApplicationProvider(
+          applicationRepository: applicationRepository,
+          localStorageService: localStorageService,
+        );
 
-      await provider1.submitApplication(
-        applicationId: 'app_cold_1',
-        jobId: 'job_cold_1',
-        jobTitle: 'Cold Test Job',
-        employerId: 'poster_cold',
-        applicantId: 'seeker_cold',
-        applicantName: 'Cold Seeker',
-        applicantPhone: '+233 24 000 1111',
-        coverNote: 'Cold restart check',
-      );
+        await provider1.submitApplication(
+          applicationId: 'app_cold_1',
+          jobId: 'job_cold_1',
+          jobTitle: 'Cold Test Job',
+          employerId: 'poster_cold',
+          applicantId: 'seeker_cold',
+          applicantName: 'Cold Seeker',
+          applicantPhone: '+233 24 000 1111',
+          coverNote: 'Cold restart check',
+        );
 
-      await provider1.updateApplicationStatus(
-        'app_cold_1',
-        ApplicationStatus.accepted,
-      );
+        await provider1.updateApplicationStatus(
+          'app_cold_1',
+          ApplicationStatus.accepted,
+        );
 
-      // Simulate app restart by creating a new provider instance
-      final provider2 = ApplicationProvider(
-        applicationRepository: applicationRepository,
-        localStorageService: localStorageService,
-      );
+        // Simulate app restart by creating a new provider instance
+        final provider2 = ApplicationProvider(
+          applicationRepository: applicationRepository,
+          localStorageService: localStorageService,
+        );
 
-      expect(provider2.applications.length, 1);
-      final reloaded = provider2.applications.first;
-      expect(reloaded.id, 'app_cold_1');
-      expect(reloaded.jobTitle, 'Cold Test Job');
-      expect(reloaded.status, ApplicationStatus.accepted);
-      expect(reloaded.seekerName, 'Cold Seeker');
-    });
+        expect(provider2.applications.length, 1);
+        final reloaded = provider2.applications.first;
+        expect(reloaded.id, 'app_cold_1');
+        expect(reloaded.jobTitle, 'Cold Test Job');
+        expect(reloaded.status, ApplicationStatus.accepted);
+        expect(reloaded.seekerName, 'Cold Seeker');
+      },
+    );
   });
 }

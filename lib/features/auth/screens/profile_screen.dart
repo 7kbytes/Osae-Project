@@ -19,9 +19,7 @@ class ProfileScreen extends StatelessWidget {
     final isSeeker = jobProvider.currentUserRole == UserRole.seeker;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Account & Settings'),
-      ),
+      appBar: AppBar(title: const Text('My Account & Settings')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(18.0),
         child: Column(
@@ -46,12 +44,19 @@ class ProfileScreen extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 32,
-                        backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.15),
+                        backgroundColor: AppTheme.primaryColor.withValues(
+                          alpha: 0.15,
+                        ),
                         child: Text(
-                          currentUser != null && currentUser.displayName.isNotEmpty
+                          currentUser != null &&
+                                  currentUser.displayName.isNotEmpty
                               ? (currentUser.displayName.length >= 2
-                                  ? currentUser.displayName.substring(0, 2).toUpperCase()
-                                  : currentUser.displayName.substring(0, 1).toUpperCase())
+                                    ? currentUser.displayName
+                                          .substring(0, 2)
+                                          .toUpperCase()
+                                    : currentUser.displayName
+                                          .substring(0, 1)
+                                          .toUpperCase())
                               : 'KM',
                           style: const TextStyle(
                             fontSize: 22,
@@ -124,7 +129,9 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
@@ -303,13 +310,16 @@ class ProfileScreen extends StatelessWidget {
                     leading: Icon(Icons.school, color: AppTheme.primaryColor),
                     title: Text('Student & Project'),
                     subtitle: Text(
-                        'Emmanuel Duodu Osae (11012457)\nBSc Computer Science, University of Ghana'),
+                      'Emmanuel Duodu Osae (11012457)\nBSc Computer Science, University of Ghana',
+                    ),
                   ),
                   Divider(height: 1),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading:
-                        Icon(Icons.location_city, color: AppTheme.primaryColor),
+                    leading: Icon(
+                      Icons.location_city,
+                      color: AppTheme.primaryColor,
+                    ),
                     title: Text('Target Regions'),
                     subtitle: Text('Accra, Kumasi, & Tema Informal Markets'),
                   ),
@@ -318,7 +328,9 @@ class ProfileScreen extends StatelessWidget {
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.cloud_done, color: Colors.green),
                     title: Text('Backend Services'),
-                    subtitle: Text('Firebase Auth, Cloud Firestore & Google Maps API'),
+                    subtitle: Text(
+                      'Firebase Auth, Cloud Firestore & Google Maps API',
+                    ),
                   ),
                 ],
               ),

@@ -90,18 +90,19 @@ void main() {
         ChangeNotifierProvider.value(value: chatProvider),
         ChangeNotifierProvider.value(value: applicationProvider),
       ],
-      child: MaterialApp(
-        theme: AppTheme.lightTheme,
-        home: child,
-      ),
+      child: MaterialApp(theme: AppTheme.lightTheme, home: child),
     );
   }
 
   group('JobDetailScreen Application & Status Flow Widget Tests', () {
-    testWidgets('Seeker submits application and verifies status badge update', (tester) async {
+    testWidgets('Seeker submits application and verifies status badge update', (
+      tester,
+    ) async {
       jobProvider.setRole(UserRole.seeker);
 
-      await tester.pumpWidget(buildTestApp(const JobDetailScreen(jobId: 'job_widget_001')));
+      await tester.pumpWidget(
+        buildTestApp(const JobDetailScreen(jobId: 'job_widget_001')),
+      );
       await tester.pumpAndSettle();
 
       // Verify Job Details & Apply button rendered
@@ -133,45 +134,57 @@ void main() {
       // Verify feedback and status badge
       expect(find.text('Application submitted successfully!'), findsOneWidget);
       expect(find.textContaining('Applied: Pending Review'), findsOneWidget);
-      expect(find.textContaining('I have 4 years experience in masonry work.'), findsOneWidget);
+      expect(
+        find.textContaining('I have 4 years experience in masonry work.'),
+        findsOneWidget,
+      );
 
       // Verify "Apply for this Job" button is no longer visible
       expect(find.byKey(const Key('apply_for_job_button')), findsNothing);
     });
 
-    testWidgets('Employer views applicant count and transitions job status lifecycle', (tester) async {
-      jobProvider.setRole(UserRole.poster);
+    testWidgets(
+      'Employer views applicant count and transitions job status lifecycle',
+      (tester) async {
+        jobProvider.setRole(UserRole.poster);
 
-      await tester.pumpWidget(buildTestApp(const JobDetailScreen(jobId: 'job_widget_001')));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          buildTestApp(const JobDetailScreen(jobId: 'job_widget_001')),
+        );
+        await tester.pumpAndSettle();
 
-      // Employer controls
-      expect(find.byKey(const Key('view_applicants_button')), findsOneWidget);
-      expect(find.text('View Applicants (0)'), findsOneWidget);
-      expect(find.text('Job Lifecycle Status'), findsOneWidget);
-      expect(find.byKey(const Key('job_status_open')), findsOneWidget);
-      expect(find.byKey(const Key('job_status_in_progress')), findsOneWidget);
-      expect(find.byKey(const Key('job_status_completed')), findsOneWidget);
+        // Employer controls
+        expect(find.byKey(const Key('view_applicants_button')), findsOneWidget);
+        expect(find.text('View Applicants (0)'), findsOneWidget);
+        expect(find.text('Job Lifecycle Status'), findsOneWidget);
+        expect(find.byKey(const Key('job_status_open')), findsOneWidget);
+        expect(find.byKey(const Key('job_status_in_progress')), findsOneWidget);
+        expect(find.byKey(const Key('job_status_completed')), findsOneWidget);
 
-      // Initial status is Open
-      expect(find.text('Active / Open'), findsOneWidget);
+        // Initial status is Open
+        expect(find.text('Active / Open'), findsOneWidget);
 
-      // Transition to In Progress
-      await tester.ensureVisible(find.byKey(const Key('job_status_in_progress')));
-      await tester.tap(find.byKey(const Key('job_status_in_progress')));
-      await tester.pumpAndSettle();
+        // Transition to In Progress
+        await tester.ensureVisible(
+          find.byKey(const Key('job_status_in_progress')),
+        );
+        await tester.tap(find.byKey(const Key('job_status_in_progress')));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Job status set to In Progress'), findsOneWidget);
-      expect(find.text('In Progress'), findsNWidgets(2)); // Badge + Chip
+        expect(find.text('Job status set to In Progress'), findsOneWidget);
+        expect(find.text('In Progress'), findsNWidgets(2)); // Badge + Chip
 
-      // Transition to Completed
-      await tester.ensureVisible(find.byKey(const Key('job_status_completed')));
-      await tester.tap(find.byKey(const Key('job_status_completed')));
-      await tester.pumpAndSettle();
+        // Transition to Completed
+        await tester.ensureVisible(
+          find.byKey(const Key('job_status_completed')),
+        );
+        await tester.tap(find.byKey(const Key('job_status_completed')));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Job status set to Completed'), findsOneWidget);
-      expect(find.text('Completed'), findsNWidgets(2)); // Badge + Chip
-    });
+        expect(find.text('Job status set to Completed'), findsOneWidget);
+        expect(find.text('Completed'), findsNWidgets(2)); // Badge + Chip
+      },
+    );
   });
 
   group('ApplicantReviewScreen Employer Review Widget Tests', () {
@@ -191,7 +204,9 @@ void main() {
       expect(find.byIcon(Icons.people_outline), findsOneWidget);
     });
 
-    testWidgets('Employer reviews applicant and accepts application', (tester) async {
+    testWidgets('Employer reviews applicant and accepts application', (
+      tester,
+    ) async {
       await applicationProvider.submitApplication(
         applicationId: 'app_review_01',
         jobId: 'job_widget_001',
@@ -216,7 +231,10 @@ void main() {
       // Verify applicant information
       expect(find.text('Kofi Mensah'), findsOneWidget);
       expect(find.text('+233 24 123 4567'), findsOneWidget);
-      expect(find.text('Available immediately for bricklaying.'), findsOneWidget);
+      expect(
+        find.text('Available immediately for bricklaying.'),
+        findsOneWidget,
+      );
       expect(find.text('Pending Review'), findsOneWidget);
       expect(find.text('Accept'), findsOneWidget);
       expect(find.text('Reject'), findsOneWidget);
@@ -227,10 +245,15 @@ void main() {
 
       expect(find.text('Accepted Kofi Mensah for this job!'), findsOneWidget);
       expect(find.text('Applicant Accepted'), findsOneWidget);
-      expect(applicationProvider.applications.first.status, ApplicationStatus.accepted);
+      expect(
+        applicationProvider.applications.first.status,
+        ApplicationStatus.accepted,
+      );
     });
 
-    testWidgets('Employer reviews applicant and rejects application', (tester) async {
+    testWidgets('Employer reviews applicant and rejects application', (
+      tester,
+    ) async {
       await applicationProvider.submitApplication(
         applicationId: 'app_review_02',
         jobId: 'job_widget_001',
@@ -261,12 +284,17 @@ void main() {
 
       expect(find.text('Application for Ama Serwaa rejected.'), findsOneWidget);
       expect(find.text('Application Rejected'), findsOneWidget);
-      expect(applicationProvider.applications.first.status, ApplicationStatus.rejected);
+      expect(
+        applicationProvider.applications.first.status,
+        ApplicationStatus.rejected,
+      );
     });
   });
 
   group('MyApplicationsScreen Seeker Tracking Widget Tests', () {
-    testWidgets('Renders empty state when seeker has no applications', (tester) async {
+    testWidgets('Renders empty state when seeker has no applications', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestApp(const MyApplicationsScreen()));
       await tester.pumpAndSettle();
 
@@ -275,34 +303,37 @@ void main() {
       expect(find.text('Browse Available Jobs'), findsOneWidget);
     });
 
-    testWidgets('Renders submitted applications list with status badges and navigation', (tester) async {
-      await applicationProvider.submitApplication(
-        applicationId: 'app_mine_01',
-        jobId: 'job_widget_001',
-        jobTitle: 'Site Mason Assistant',
-        employerId: 'poster_01',
-        applicantId: 'seeker_001',
-        applicantName: 'Kofi Mensah',
-        applicantPhone: '+233 24 123 4567',
-        coverNote: 'Experienced helper',
-      );
+    testWidgets(
+      'Renders submitted applications list with status badges and navigation',
+      (tester) async {
+        await applicationProvider.submitApplication(
+          applicationId: 'app_mine_01',
+          jobId: 'job_widget_001',
+          jobTitle: 'Site Mason Assistant',
+          employerId: 'poster_01',
+          applicantId: 'seeker_001',
+          applicantName: 'Kofi Mensah',
+          applicantPhone: '+233 24 123 4567',
+          coverNote: 'Experienced helper',
+        );
 
-      await tester.pumpWidget(buildTestApp(const MyApplicationsScreen()));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(buildTestApp(const MyApplicationsScreen()));
+        await tester.pumpAndSettle();
 
-      // Verify application card
-      expect(find.text('Site Mason Assistant'), findsOneWidget);
-      expect(find.text('Pending Review'), findsOneWidget);
-      expect(find.text('Note: "Experienced helper"'), findsOneWidget);
-      expect(find.text('View Job'), findsOneWidget);
+        // Verify application card
+        expect(find.text('Site Mason Assistant'), findsOneWidget);
+        expect(find.text('Pending Review'), findsOneWidget);
+        expect(find.text('Note: "Experienced helper"'), findsOneWidget);
+        expect(find.text('View Job'), findsOneWidget);
 
-      // Tap View Job button
-      await tester.tap(find.text('View Job'));
-      await tester.pumpAndSettle();
+        // Tap View Job button
+        await tester.tap(find.text('View Job'));
+        await tester.pumpAndSettle();
 
-      // Navigated to JobDetailScreen
-      expect(find.text('Job Details'), findsOneWidget);
-      expect(find.text('Job Description'), findsOneWidget);
-    });
+        // Navigated to JobDetailScreen
+        expect(find.text('Job Details'), findsOneWidget);
+        expect(find.text('Job Description'), findsOneWidget);
+      },
+    );
   });
 }

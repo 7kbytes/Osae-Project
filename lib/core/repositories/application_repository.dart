@@ -14,7 +14,7 @@ class FirestoreApplicationRepository implements ApplicationRepository {
   final FirebaseFirestore _firestore;
 
   FirestoreApplicationRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _applicationsCollection =>
       _firestore.collection('applications');
@@ -25,9 +25,11 @@ class FirestoreApplicationRepository implements ApplicationRepository {
         .where('seekerId', isEqualTo: seekerId)
         .orderBy('appliedAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => JobApplication.fromMap(doc.data(), doc.id))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => JobApplication.fromMap(doc.data(), doc.id))
+              .toList(),
+        );
   }
 
   @override
@@ -36,9 +38,11 @@ class FirestoreApplicationRepository implements ApplicationRepository {
         .where('posterId', isEqualTo: posterId)
         .orderBy('appliedAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => JobApplication.fromMap(doc.data(), doc.id))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => JobApplication.fromMap(doc.data(), doc.id))
+              .toList(),
+        );
   }
 
   @override
@@ -47,7 +51,10 @@ class FirestoreApplicationRepository implements ApplicationRepository {
   }
 
   @override
-  Future<void> updateStatus(String applicationId, ApplicationStatus status) async {
+  Future<void> updateStatus(
+    String applicationId,
+    ApplicationStatus status,
+  ) async {
     await _applicationsCollection.doc(applicationId).update({
       'status': status.name,
     });
@@ -64,7 +71,7 @@ class InMemoryApplicationRepository implements ApplicationRepository {
     LocalStorageService? localStorageService,
     List<JobApplication>? initialApplications,
   }) : _localStorageService =
-            localStorageService ?? LocalStorageService.instance {
+           localStorageService ?? LocalStorageService.instance {
     if (initialApplications != null) {
       _applications.addAll(initialApplications);
     } else {
@@ -105,7 +112,10 @@ class InMemoryApplicationRepository implements ApplicationRepository {
   }
 
   @override
-  Future<void> updateStatus(String applicationId, ApplicationStatus status) async {
+  Future<void> updateStatus(
+    String applicationId,
+    ApplicationStatus status,
+  ) async {
     final index = _applications.indexWhere((app) => app.id == applicationId);
     if (index != -1) {
       _applications[index] = _applications[index].copyWith(status: status);

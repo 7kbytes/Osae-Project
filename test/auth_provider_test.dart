@@ -41,7 +41,10 @@ void main() {
         startAuthenticated: false,
       );
 
-      final success = await unauth.signInWithEmail('kwame.osei@gmail.com', 'password123');
+      final success = await unauth.signInWithEmail(
+        'kwame.osei@gmail.com',
+        'password123',
+      );
       expect(success, true);
       expect(unauth.isAuthenticated, true);
       expect(unauth.currentUser, isNotNull);
@@ -95,7 +98,9 @@ void main() {
       await authProvider.switchRole(UserRole.poster);
       expect(authProvider.currentUser!.role, UserRole.poster);
 
-      final savedUser = await userRepository.getUser(authProvider.currentUser!.id);
+      final savedUser = await userRepository.getUser(
+        authProvider.currentUser!.id,
+      );
       expect(savedUser!.role, UserRole.poster);
 
       await authProvider.switchRole(UserRole.seeker);

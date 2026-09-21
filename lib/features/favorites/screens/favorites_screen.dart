@@ -13,16 +13,17 @@ class FavoritesScreen extends StatelessWidget {
     final favJobs = jobProvider.favoriteJobs;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Saved Jobs / Favorites'),
-      ),
+      appBar: AppBar(title: const Text('Saved Jobs / Favorites')),
       body: favJobs.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.favorite_border,
-                      size: 64, color: Colors.grey.shade400),
+                  Icon(
+                    Icons.favorite_border,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
                   const SizedBox(height: 12),
                   const Text(
                     'No saved jobs yet.',

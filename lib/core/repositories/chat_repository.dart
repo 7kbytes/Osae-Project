@@ -20,22 +20,30 @@ class FirestoreChatRepository implements ChatRepository {
   final FirebaseFirestore _firestore;
 
   FirestoreChatRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _chatsCollection =>
       _firestore.collection('chats');
 
   @override
   Stream<List<ChatRoom>> getChatRoomsStream(String userId) {
+    // Scoped to the caller so Firestore rules (members only) accept the query.
+    // Sorted client-side to avoid needing a composite index.
     return _chatsCollection
-        .orderBy('updatedAt', descending: true)
+        .where(
+          Filter.or(
+            Filter('seekerId', isEqualTo: userId),
+            Filter('posterId', isEqualTo: userId),
+          ),
+        )
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => ChatRoom.fromMap(doc.data(), doc.id))
-          .where((room) => room.seekerId == userId || room.posterId == userId)
-          .toList();
-    });
+          final rooms = snapshot.docs
+              .map((doc) => ChatRoom.fromMap(doc.data(), doc.id))
+              .toList();
+          rooms.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+          return rooms;
+        });
   }
 
   @override
@@ -46,10 +54,10 @@ class FirestoreChatRepository implements ChatRepository {
         .orderBy('timestamp', descending: false)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => ChatMessage.fromMap(doc.data(), doc.id))
-          .toList();
-    });
+          return snapshot.docs
+              .map((doc) => ChatMessage.fromMap(doc.data(), doc.id))
+              .toList();
+        });
   }
 
   @override
@@ -71,7 +79,8 @@ class FirestoreChatRepository implements ChatRepository {
       return existingSnapshot.docs.first.id;
     }
 
-    final docRef = _chatsCollection.doc();
+    // Deterministic id so the client and Firestore always agree on the room.
+    final docRef = _chatsCollection.doc(ChatRoom.idFor(jobId, seekerId));
     final newRoom = ChatRoom(
       id: docRef.id,
       jobId: jobId,
@@ -95,7 +104,10 @@ class FirestoreChatRepository implements ChatRepository {
       timestamp: DateTime.now(),
       isRead: true,
     );
-    await docRef.collection('messages').doc(initMessage.id).set(initMessage.toMap());
+    await docRef
+        .collection('messages')
+        .doc(initMessage.id)
+        .set(initMessage.toMap());
 
     return docRef.id;
   }
@@ -103,7 +115,10 @@ class FirestoreChatRepository implements ChatRepository {
   @override
   Future<void> sendMessage(String roomId, ChatMessage message) async {
     final batch = _firestore.batch();
-    final messageRef = _chatsCollection.doc(roomId).collection('messages').doc(message.id);
+    final messageRef = _chatsCollection
+        .doc(roomId)
+        .collection('messages')
+        .doc(message.id);
     final roomRef = _chatsCollection.doc(roomId);
 
     batch.set(messageRef, message.toMap());
@@ -122,7 +137,8 @@ class InMemoryChatRepository implements ChatRepository {
 
   final StreamController<List<ChatRoom>> _roomsController =
       StreamController<List<ChatRoom>>.broadcast();
-  final Map<String, StreamController<List<ChatMessage>>> _messageControllers = {};
+  final Map<String, StreamController<List<ChatMessage>>> _messageControllers =
+      {};
 
   InMemoryChatRepository() {
     _initDemoData();
@@ -193,8 +209,12 @@ class InMemoryChatRepository implements ChatRepository {
     Timer.run(_notifyRooms);
     return _roomsController.stream.map((list) {
       return list
-          .where((room) =>
-              userId.isEmpty || room.seekerId == userId || room.posterId == userId)
+          .where(
+            (room) =>
+                userId.isEmpty ||
+                room.seekerId == userId ||
+                room.posterId == userId,
+          )
           .toList();
     });
   }
@@ -226,7 +246,7 @@ class InMemoryChatRepository implements ChatRepository {
       return _rooms[index].id;
     }
 
-    final newRoomId = 'chat_${DateTime.now().millisecondsSinceEpoch}';
+    final newRoomId = ChatRoom.idFor(jobId, seekerId);
     final newRoom = ChatRoom(
       id: newRoomId,
       jobId: jobId,

@@ -37,12 +37,18 @@ class SafeNetworkImage extends StatelessWidget {
       child: Icon(
         defaultFallbackIcon,
         color: AppTheme.textMuted,
-        size: (width != null && height != null) ? (width! < height! ? width! * 0.5 : height! * 0.5) : 24,
+        size: (width != null && height != null)
+            ? (width! < height! ? width! * 0.5 : height! * 0.5)
+            : 24,
       ),
     );
   }
 
-  Widget _buildPlaceholder(BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+  Widget _buildPlaceholder(
+    BuildContext context,
+    Widget child,
+    ImageChunkEvent? loadingProgress,
+  ) {
     if (loadingProgress == null) return child;
     if (placeholder != null) return placeholder!;
 
@@ -53,7 +59,8 @@ class SafeNetworkImage extends StatelessWidget {
       alignment: Alignment.center,
       child: CircularProgressIndicator(
         value: loadingProgress.expectedTotalBytes != null
-            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+            ? loadingProgress.cumulativeBytesLoaded /
+                  loadingProgress.expectedTotalBytes!
             : null,
         strokeWidth: 2,
         color: AppTheme.primaryColor,
@@ -65,7 +72,9 @@ class SafeNetworkImage extends StatelessWidget {
   Widget build(BuildContext context) {
     // Validate URL
     final url = imageUrl?.trim();
-    if (url == null || url.isEmpty || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+    if (url == null ||
+        url.isEmpty ||
+        (!url.startsWith('http://') && !url.startsWith('https://'))) {
       final fallback = _buildFallback();
       if (borderRadius != null) {
         return ClipRRect(borderRadius: borderRadius!, child: fallback);

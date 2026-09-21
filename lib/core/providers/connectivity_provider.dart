@@ -8,9 +8,11 @@ class ConnectivityProvider extends ChangeNotifier {
   StreamSubscription<bool>? _subscription;
   bool _isOnline;
 
-  ConnectivityProvider({ConnectivityService? service, bool initialOnline = true})
-      : _service = service ?? ConnectivityService.instance,
-        _isOnline = initialOnline {
+  ConnectivityProvider({
+    ConnectivityService? service,
+    bool initialOnline = true,
+  }) : _service = service ?? ConnectivityService.instance,
+       _isOnline = initialOnline {
     _subscription = _service.onConnectivityChanged.listen((status) {
       if (_isOnline != status) {
         _isOnline = status;

@@ -85,10 +85,7 @@ class ApplicantReviewScreen extends StatelessWidget {
                     const Text(
                       'When job seekers apply for this listing, their applications will appear here for your review.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppTheme.textMuted,
-                      ),
+                      style: TextStyle(fontSize: 14, color: AppTheme.textMuted),
                     ),
                   ],
                 ),
@@ -118,13 +115,14 @@ class ApplicantReviewScreen extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               radius: 22,
-                              backgroundColor: AppTheme.primaryColor
-                                  .withValues(alpha: 0.12),
+                              backgroundColor: AppTheme.primaryColor.withValues(
+                                alpha: 0.12,
+                              ),
                               child: Text(
                                 app.seekerName.isNotEmpty
                                     ? app.seekerName
-                                        .substring(0, 1)
-                                        .toUpperCase()
+                                          .substring(0, 1)
+                                          .toUpperCase()
                                     : 'A',
                                 style: const TextStyle(
                                   fontSize: 18,
@@ -202,9 +200,7 @@ class ApplicantReviewScreen extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: Colors.grey.shade50,
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: Colors.grey.shade200,
-                              ),
+                              border: Border.all(color: Colors.grey.shade200),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,8 +277,8 @@ class ApplicantReviewScreen extends StatelessWidget {
                                   seekerId: app.seekerId,
                                   seekerName: app.seekerName,
                                   posterId: app.posterId,
-                                  posterName: currentPoster?.displayName ??
-                                      'Employer',
+                                  posterName:
+                                      currentPoster?.displayName ?? 'Employer',
                                 );
 
                                 Navigator.push(
@@ -314,9 +310,9 @@ class ApplicantReviewScreen extends StatelessWidget {
                                 onPressed: () async {
                                   await applicationProvider
                                       .updateApplicationStatus(
-                                    app.id,
-                                    ApplicationStatus.rejected,
-                                  );
+                                        app.id,
+                                        ApplicationStatus.rejected,
+                                      );
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
@@ -343,9 +339,9 @@ class ApplicantReviewScreen extends StatelessWidget {
                                 onPressed: () async {
                                   await applicationProvider
                                       .updateApplicationStatus(
-                                    app.id,
-                                    ApplicationStatus.accepted,
-                                  );
+                                        app.id,
+                                        ApplicationStatus.accepted,
+                                      );
                                   await jobProvider.updateJobStatus(
                                     jobId,
                                     JobStatus.inProgress,
@@ -366,8 +362,8 @@ class ApplicantReviewScreen extends StatelessWidget {
                                 app.status == ApplicationStatus.accepted
                                     ? 'Applicant Accepted'
                                     : (app.status == ApplicationStatus.rejected
-                                        ? 'Application Rejected'
-                                        : 'Completed'),
+                                          ? 'Application Rejected'
+                                          : 'Completed'),
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,

@@ -58,10 +58,7 @@ Widget buildResiliencyTestApp(
             ChatProvider(chatRepository: InMemoryChatRepository()),
       ),
     ],
-    child: MaterialApp(
-      theme: AppTheme.lightTheme,
-      home: child,
-    ),
+    child: MaterialApp(theme: AppTheme.lightTheme, home: child),
   );
 }
 
@@ -144,58 +141,85 @@ void main() {
 
     test('validateRequired enforces field non-emptiness and length bounds', () {
       // Valid inputs
-      expect(FormValidators.validateRequired('Market Porter', 'Job Title'), isNull);
-      expect(FormValidators.validateRequired('Kwame Nkrumah Circle', 'Location'), isNull);
+      expect(
+        FormValidators.validateRequired('Market Porter', 'Job Title'),
+        isNull,
+      );
+      expect(
+        FormValidators.validateRequired('Kwame Nkrumah Circle', 'Location'),
+        isNull,
+      );
 
       // Empty / Whitespace inputs
-      expect(FormValidators.validateRequired(null, 'Job Title'), 'Please enter a title');
-      expect(FormValidators.validateRequired('', 'Job Description'), 'Please enter job description');
-      expect(FormValidators.validateRequired('   ', 'Location'), 'Please specify location');
-      expect(FormValidators.validateRequired('', 'Full Name'), 'Enter full name');
-      expect(FormValidators.validateRequired('', 'CustomField'), 'CustomField is required');
+      expect(
+        FormValidators.validateRequired(null, 'Job Title'),
+        'Please enter a title',
+      );
+      expect(
+        FormValidators.validateRequired('', 'Job Description'),
+        'Please enter job description',
+      );
+      expect(
+        FormValidators.validateRequired('   ', 'Location'),
+        'Please specify location',
+      );
+      expect(
+        FormValidators.validateRequired('', 'Full Name'),
+        'Enter full name',
+      );
+      expect(
+        FormValidators.validateRequired('', 'CustomField'),
+        'CustomField is required',
+      );
 
       // Length boundary constraints
-      expect(FormValidators.validateRequired('ab', 'Title', minLength: 5), isNotNull);
-      expect(FormValidators.validateRequired('a' * 50, 'Title', maxLength: 10), isNotNull);
+      expect(
+        FormValidators.validateRequired('ab', 'Title', minLength: 5),
+        isNotNull,
+      );
+      expect(
+        FormValidators.validateRequired('a' * 50, 'Title', maxLength: 10),
+        isNotNull,
+      );
     });
   });
 
   group('2. InputSanitizer Unit Tests', () {
-    test('sanitize strips script tags, HTML elements, and control characters', () {
-      // Script stripping
-      expect(
-        InputSanitizer.sanitize('<script>alert("attack")</script>Hello'),
-        'Hello',
-      );
-      expect(
-        InputSanitizer.sanitize('<script src="malicious.js"></script>Safe'),
-        'Safe',
-      );
+    test(
+      'sanitize strips script tags, HTML elements, and control characters',
+      () {
+        // Script stripping
+        expect(
+          InputSanitizer.sanitize('<script>alert("attack")</script>Hello'),
+          'Hello',
+        );
+        expect(
+          InputSanitizer.sanitize('<script src="malicious.js"></script>Safe'),
+          'Safe',
+        );
 
-      // HTML stripping
-      expect(
-        InputSanitizer.sanitize('<b>Bold</b> <p>Text</p>'),
-        'Bold Text',
-      );
+        // HTML stripping
+        expect(InputSanitizer.sanitize('<b>Bold</b> <p>Text</p>'), 'Bold Text');
 
-      // Javascript URI stripping
-      expect(
-        InputSanitizer.sanitize('javascript:doSomething()'),
-        'doSomething()',
-      );
+        // Javascript URI stripping
+        expect(
+          InputSanitizer.sanitize('javascript:doSomething()'),
+          'doSomething()',
+        );
 
-      // Null byte & control character stripping
-      expect(
-        InputSanitizer.sanitize('Clean\x00String\x07With\x1FControl'),
-        'CleanStringWithControl',
-      );
+        // Null byte & control character stripping
+        expect(
+          InputSanitizer.sanitize('Clean\x00String\x07With\x1FControl'),
+          'CleanStringWithControl',
+        );
 
-      // Whitespace trimming
-      expect(
-        InputSanitizer.sanitize('   Clean Text Here   '),
-        'Clean Text Here',
-      );
-    });
+        // Whitespace trimming
+        expect(
+          InputSanitizer.sanitize('   Clean Text Here   '),
+          'Clean Text Here',
+        );
+      },
+    );
 
     test('sanitizeEmail formats and lowercases email strings', () {
       expect(
@@ -210,10 +234,7 @@ void main() {
         InputSanitizer.sanitizePhone(' +233 (24) 123-4567 '),
         '+233241234567',
       );
-      expect(
-        InputSanitizer.sanitizePhone('024 123 4567'),
-        '0241234567',
-      );
+      expect(InputSanitizer.sanitizePhone('024 123 4567'), '0241234567');
       expect(InputSanitizer.sanitizePhone(null), '');
     });
 
@@ -225,43 +246,45 @@ void main() {
   });
 
   group('3. ConnectivityProvider & OfflineBanner Widget Tests', () {
-    testWidgets('OfflineBanner hides when online and displays banner when offline', (
-      WidgetTester tester,
-    ) async {
-      final connectivity = ConnectivityProvider(initialOnline: true);
+    testWidgets(
+      'OfflineBanner hides when online and displays banner when offline',
+      (WidgetTester tester) async {
+        final connectivity = ConnectivityProvider(initialOnline: true);
 
-      await tester.pumpWidget(
-        buildResiliencyTestApp(
-          const OfflineBanner(
-            child: Scaffold(
-              body: Center(child: Text('Main App Content')),
+        await tester.pumpWidget(
+          buildResiliencyTestApp(
+            const OfflineBanner(
+              child: Scaffold(body: Center(child: Text('Main App Content'))),
             ),
+            connectivityProvider: connectivity,
           ),
-          connectivityProvider: connectivity,
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // When online: main content visible, no offline banner container rendered
-      expect(find.text('Main App Content'), findsOneWidget);
-      expect(find.byKey(const Key('offline_banner_container')), findsNothing);
+        // When online: main content visible, no offline banner container rendered
+        expect(find.text('Main App Content'), findsOneWidget);
+        expect(find.byKey(const Key('offline_banner_container')), findsNothing);
 
-      // Transition to offline
-      connectivity.setOnline(false);
-      await tester.pumpAndSettle();
+        // Transition to offline
+        connectivity.setOnline(false);
+        await tester.pumpAndSettle();
 
-      // When offline: offline banner is rendered with warning text and icon
-      expect(find.byKey(const Key('offline_banner_container')), findsOneWidget);
-      expect(find.byIcon(Icons.cloud_off_rounded), findsOneWidget);
-      expect(find.textContaining('Offline Mode'), findsOneWidget);
+        // When offline: offline banner is rendered with warning text and icon
+        expect(
+          find.byKey(const Key('offline_banner_container')),
+          findsOneWidget,
+        );
+        expect(find.byIcon(Icons.cloud_off_rounded), findsOneWidget);
+        expect(find.textContaining('Offline Mode'), findsOneWidget);
 
-      // Transition back to online
-      connectivity.setOnline(true);
-      await tester.pumpAndSettle();
+        // Transition back to online
+        connectivity.setOnline(true);
+        await tester.pumpAndSettle();
 
-      // Banner should disappear
-      expect(find.byKey(const Key('offline_banner_container')), findsNothing);
-    });
+        // Banner should disappear
+        expect(find.byKey(const Key('offline_banner_container')), findsNothing);
+      },
+    );
 
     test('ConnectivityService broadcasts updates to listeners', () async {
       final service = ConnectivityService();
@@ -292,9 +315,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         buildResiliencyTestApp(
-          const GlobalErrorBoundary(
-            child: Text('Safe Child Content'),
-          ),
+          const GlobalErrorBoundary(child: Text('Safe Child Content')),
         ),
       );
       await tester.pumpAndSettle();
@@ -303,130 +324,142 @@ void main() {
       expect(find.text('Something Went Wrong'), findsNothing);
     });
 
-    testWidgets('GlobalErrorBoundary displays recovery UI and recovers on retry', (
-      WidgetTester tester,
-    ) async {
-      final boundaryKey = GlobalKey<GlobalErrorBoundaryState>();
+    testWidgets(
+      'GlobalErrorBoundary displays recovery UI and recovers on retry',
+      (WidgetTester tester) async {
+        final boundaryKey = GlobalKey<GlobalErrorBoundaryState>();
 
-      await tester.pumpWidget(
-        buildResiliencyTestApp(
-          GlobalErrorBoundary(
-            key: boundaryKey,
-            child: const Text('Child Before Error'),
+        await tester.pumpWidget(
+          buildResiliencyTestApp(
+            GlobalErrorBoundary(
+              key: boundaryKey,
+              child: const Text('Child Before Error'),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Child Before Error'), findsOneWidget);
+        expect(find.text('Child Before Error'), findsOneWidget);
 
-      // Trigger error boundary
-      boundaryKey.currentState?.catchError(
-        FlutterErrorDetails(
-          exception: Exception('Simulated test rendering exception'),
-          stack: StackTrace.current,
-        ),
-      );
-      await tester.pumpAndSettle();
+        // Trigger error boundary
+        boundaryKey.currentState?.catchError(
+          FlutterErrorDetails(
+            exception: Exception('Simulated test rendering exception'),
+            stack: StackTrace.current,
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // Verify custom error screen is displayed
-      expect(find.text('Something Went Wrong'), findsOneWidget);
-      expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
-      expect(find.byKey(const Key('global_error_retry_button')), findsOneWidget);
-      expect(find.byKey(const Key('global_error_home_button')), findsOneWidget);
+        // Verify custom error screen is displayed
+        expect(find.text('Something Went Wrong'), findsOneWidget);
+        expect(find.byIcon(Icons.error_outline_rounded), findsOneWidget);
+        expect(
+          find.byKey(const Key('global_error_retry_button')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('global_error_home_button')),
+          findsOneWidget,
+        );
 
-      // Tap Try Again recovery button
-      await tester.tap(find.byKey(const Key('global_error_retry_button')));
-      await tester.pumpAndSettle();
+        // Tap Try Again recovery button
+        await tester.tap(find.byKey(const Key('global_error_retry_button')));
+        await tester.pumpAndSettle();
 
-      // State is reset and child is displayed again
-      expect(find.text('Child Before Error'), findsOneWidget);
-      expect(find.text('Something Went Wrong'), findsNothing);
-    });
+        // State is reset and child is displayed again
+        expect(find.text('Child Before Error'), findsOneWidget);
+        expect(find.text('Something Went Wrong'), findsNothing);
+      },
+    );
   });
 
   group('5. JobDetailScreen Crash Prevention & Fallback Tests', () {
-    testWidgets('JobDetailScreen gracefully renders Job Not Found when job does not exist', (
-      WidgetTester tester,
-    ) async {
-      final emptyJobProvider =
-          JobProvider(jobRepository: InMemoryJobRepository(initialJobs: []));
+    testWidgets(
+      'JobDetailScreen gracefully renders Job Not Found when job does not exist',
+      (WidgetTester tester) async {
+        final emptyJobProvider = JobProvider(
+          jobRepository: InMemoryJobRepository(initialJobs: []),
+        );
 
-      await tester.pumpWidget(
-        buildResiliencyTestApp(
-          const JobDetailScreen(jobId: 'non_existent_job_12345'),
-          jobProvider: emptyJobProvider,
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          buildResiliencyTestApp(
+            const JobDetailScreen(jobId: 'non_existent_job_12345'),
+            jobProvider: emptyJobProvider,
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // Verify no exception was thrown and Job Not Found UI is rendered
-      expect(find.text('Job Not Found'), findsOneWidget);
-      expect(find.byIcon(Icons.search_off), findsOneWidget);
-      expect(find.textContaining('listing is no longer available'), findsOneWidget);
-      expect(find.byKey(const Key('return_to_jobs_feed_button')), findsOneWidget);
-    });
+        // Verify no exception was thrown and Job Not Found UI is rendered
+        expect(find.text('Job Not Found'), findsOneWidget);
+        expect(find.byIcon(Icons.search_off), findsOneWidget);
+        expect(
+          find.textContaining('listing is no longer available'),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('return_to_jobs_feed_button')),
+          findsOneWidget,
+        );
+      },
+    );
   });
 
   group('6. SafeNetworkImage Fallback & Placeholder Tests', () {
-    testWidgets('SafeNetworkImage renders fallback widget on null or invalid URL', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        buildResiliencyTestApp(
-          const Column(
-            children: [
-              SafeNetworkImage(
-                imageUrl: null,
-                width: 60,
-                height: 60,
-              ),
-              SafeNetworkImage(
-                imageUrl: '',
-                width: 60,
-                height: 60,
-              ),
-              SafeNetworkImage(
-                imageUrl: 'not_a_valid_url',
-                width: 60,
-                height: 60,
-              ),
-              SafeNetworkImage(
-                imageUrl: null,
-                fallbackWidget: Text('Custom Fallback Text'),
-              ),
-            ],
+    testWidgets(
+      'SafeNetworkImage renders fallback widget on null or invalid URL',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          buildResiliencyTestApp(
+            const Column(
+              children: [
+                SafeNetworkImage(imageUrl: null, width: 60, height: 60),
+                SafeNetworkImage(imageUrl: '', width: 60, height: 60),
+                SafeNetworkImage(
+                  imageUrl: 'not_a_valid_url',
+                  width: 60,
+                  height: 60,
+                ),
+                SafeNetworkImage(
+                  imageUrl: null,
+                  fallbackWidget: Text('Custom Fallback Text'),
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Expect default fallback icons for null/empty/invalid
-      expect(find.byIcon(Icons.image_not_supported_outlined), findsNWidgets(3));
-      // Expect custom fallback widget
-      expect(find.text('Custom Fallback Text'), findsOneWidget);
-    });
+        // Expect default fallback icons for null/empty/invalid
+        expect(
+          find.byIcon(Icons.image_not_supported_outlined),
+          findsNWidgets(3),
+        );
+        // Expect custom fallback widget
+        expect(find.text('Custom Fallback Text'), findsOneWidget);
+      },
+    );
   });
 
   group('7. MapViewScreen Graceful Degradation Tests', () {
-    testWidgets('MapViewScreen renders map explorer and handles fallback mode', (
-      WidgetTester tester,
-    ) async {
-      final jobProvider = JobProvider(jobRepository: InMemoryJobRepository());
+    testWidgets(
+      'MapViewScreen renders map explorer and handles fallback mode',
+      (WidgetTester tester) async {
+        final jobProvider = JobProvider(jobRepository: InMemoryJobRepository());
 
-      await tester.pumpWidget(
-        buildResiliencyTestApp(
-          const MapViewScreen(),
-          jobProvider: jobProvider,
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          buildResiliencyTestApp(
+            const MapViewScreen(),
+            jobProvider: jobProvider,
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // Header is rendered
-      expect(find.text('Map Explorer'), findsOneWidget);
-      expect(find.text('Accra'), findsOneWidget);
-      expect(find.text('Kumasi'), findsOneWidget);
-      expect(find.text('Tema'), findsOneWidget);
-    });
+        // Header is rendered
+        expect(find.text('Map Explorer'), findsOneWidget);
+        expect(find.text('Accra'), findsOneWidget);
+        expect(find.text('Kumasi'), findsOneWidget);
+        expect(find.text('Tema'), findsOneWidget);
+      },
+    );
   });
 }

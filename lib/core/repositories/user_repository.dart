@@ -12,7 +12,7 @@ class FirestoreUserRepository implements UserRepository {
   final FirebaseFirestore _firestore;
 
   FirestoreUserRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _usersCollection =>
       _firestore.collection('users');
@@ -30,17 +30,14 @@ class FirestoreUserRepository implements UserRepository {
 
   @override
   Future<void> saveUser(AppUser user) async {
-    await _usersCollection.doc(user.id).set(
-          user.toMap(),
-          SetOptions(merge: true),
-        );
+    await _usersCollection
+        .doc(user.id)
+        .set(user.toMap(), SetOptions(merge: true));
   }
 
   @override
   Future<void> updateUserRole(String userId, UserRole role) async {
-    await _usersCollection.doc(userId).update({
-      'role': role.name,
-    });
+    await _usersCollection.doc(userId).update({'role': role.name});
   }
 }
 

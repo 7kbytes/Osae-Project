@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../app/theme.dart';
+import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/chat_provider.dart';
 
 class ChatRoomScreen extends StatefulWidget {
@@ -27,10 +28,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     if (_textController.text.trim().isEmpty) return;
 
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    final me = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (me == null) return;
     chatProvider.sendMessage(
       roomId: widget.roomId,
-      senderId: 'seeker_001',
-      senderName: 'Kofi Mensah',
+      senderId: me.id,
+      senderName: me.displayName,
       text: _textController.text.trim(),
     );
 
@@ -47,6 +50,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   Widget build(BuildContext context) {
     final chatProvider = Provider.of<ChatProvider>(context);
     final messages = chatProvider.getMessages(widget.roomId);
+    final myId = Provider.of<AuthProvider>(context).currentUser?.id ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -78,15 +82,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               itemCount: messages.length,
               itemBuilder: (context, index) {
                 final msg = messages[index];
-                final isMe = msg.senderId == 'seeker_001';
+                final isMe = msg.senderId == myId;
 
                 return Align(
-                  alignment:
-                      isMe ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment: isMe
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 10),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     constraints: BoxConstraints(
                       maxWidth: MediaQuery.of(context).size.width * 0.75,
                     ),
@@ -161,8 +168,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     radius: 24,
                     backgroundColor: AppTheme.primaryColor,
                     child: IconButton(
-                      icon: const Icon(Icons.send,
-                          color: Colors.white, size: 20),
+                      icon: const Icon(
+                        Icons.send,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                       onPressed: _sendMessage,
                     ),
                   ),

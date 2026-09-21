@@ -31,10 +31,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: OfflineBanner(
-        child: IndexedStack(
-          index: _currentIndex,
-          children: _screens,
-        ),
+        child: IndexedStack(index: _currentIndex, children: _screens),
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -56,7 +53,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           type: BottomNavigationBarType.fixed,
           selectedItemColor: AppTheme.primaryColor,
           unselectedItemColor: AppTheme.textMuted,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 11,
+          ),
           unselectedLabelStyle: const TextStyle(fontSize: 11),
           items: const [
             BottomNavigationBarItem(

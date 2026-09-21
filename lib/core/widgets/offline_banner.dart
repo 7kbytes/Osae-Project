@@ -12,7 +12,8 @@ class OfflineBanner extends StatelessWidget {
   const OfflineBanner({
     super.key,
     required this.child,
-    this.offlineMessage = 'Offline Mode — browsing cached jobs. Changes will sync when connected.',
+    this.offlineMessage =
+        'Offline Mode — browsing cached jobs. Changes will sync when connected.',
     this.showDismiss = false,
   });
 
@@ -36,7 +37,10 @@ class OfflineBanner extends StatelessWidget {
               ? Container(
                   key: const Key('offline_banner_container'),
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.amber.shade800,
                     boxShadow: [

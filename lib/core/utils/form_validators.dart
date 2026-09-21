@@ -6,9 +6,7 @@ class FormValidators {
     r'^(?!.*\.\.)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$',
   );
 
-  static final RegExp _ghanaPhoneRegex = RegExp(
-    r'^(?:\+233|0)[235][0-9]{8}$',
-  );
+  static final RegExp _ghanaPhoneRegex = RegExp(r'^(?:\+233|0)[235][0-9]{8}$');
 
   /// Validates email address format.
   static String? validateEmail(String? value) {

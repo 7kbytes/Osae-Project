@@ -45,7 +45,10 @@ void main() {
       jobProvider.setCategoryFilter('Hospitality');
       final hospitalityJobs = jobProvider.filteredJobs;
       expect(hospitalityJobs.isNotEmpty, true);
-      expect(hospitalityJobs.every((job) => job.category == 'Hospitality'), true);
+      expect(
+        hospitalityJobs.every((job) => job.category == 'Hospitality'),
+        true,
+      );
 
       jobProvider.setCategoryFilter('Cleaning');
       final cleaningJobs = jobProvider.filteredJobs;
@@ -58,10 +61,12 @@ void main() {
       final circleResults = jobProvider.filteredJobs;
       expect(circleResults.isNotEmpty, true);
       expect(
-        circleResults.every((job) =>
-            job.title.toLowerCase().contains('circle') ||
-            job.description.toLowerCase().contains('circle') ||
-            job.locationName.toLowerCase().contains('circle')),
+        circleResults.every(
+          (job) =>
+              job.title.toLowerCase().contains('circle') ||
+              job.description.toLowerCase().contains('circle') ||
+              job.locationName.toLowerCase().contains('circle'),
+        ),
         true,
       );
 
