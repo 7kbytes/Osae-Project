@@ -157,7 +157,25 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
 
           // Job Feed List
           Expanded(
-            child: filteredJobs.isEmpty
+            child: (jobProvider.isLoading && filteredJobs.isEmpty)
+                ? const Center(child: CircularProgressIndicator())
+                : (jobProvider.loadError != null && filteredJobs.isEmpty)
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.cloud_off, size: 56),
+                        const SizedBox(height: 12),
+                        Text(jobProvider.loadError!),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: jobProvider.retryLoad,
+                          child: const Text('Try again'),
+                        ),
+                      ],
+                    ),
+                  )
+                : filteredJobs.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,

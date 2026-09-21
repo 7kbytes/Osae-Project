@@ -48,16 +48,32 @@ class JobProvider with ChangeNotifier {
       _favoriteJobIds.addAll(cachedFavorites);
     }
 
+    _subscribe();
+  }
+
+  void _subscribe() {
     // Subscribe to repository stream for live updates
     _jobsSubscription?.cancel();
-    _jobsSubscription = _jobRepository.getJobsStream().listen((updatedJobs) {
-      // Against Firestore an empty list is real (e.g. the last job was deleted).
-      if (updatedJobs.isNotEmpty || FirebaseService.isInitialized) {
-        _jobs = List.from(updatedJobs);
-        _localStorageService.saveJobs(_jobs);
+    _jobsSubscription = _jobRepository.getJobsStream().listen(
+      (updatedJobs) {
+        _isLoading = false;
+        _loadError = null;
+        // Against Firestore an empty list is real (e.g. the last job was deleted).
+        if (updatedJobs.isNotEmpty || FirebaseService.isInitialized) {
+          _jobs = List.from(updatedJobs);
+          _localStorageService.saveJobs(_jobs);
+          notifyListeners();
+        } else {
+          notifyListeners();
+        }
+      },
+      onError: (Object e) {
+        debugPrint('Job stream error: $e');
+        _isLoading = false;
+        _loadError = 'Could not load jobs. Check your connection.';
         notifyListeners();
-      }
-    });
+      },
+    );
   }
 
   // Getters
@@ -111,6 +127,22 @@ class JobProvider with ChangeNotifier {
   }
 
   String? _lastError;
+  bool _isLoading = FirebaseService.isInitialized;
+  String? _loadError;
+
+  /// True until the first list arrives from the backend.
+  bool get isLoading => _isLoading;
+
+  /// Set when the live job list could not be loaded.
+  String? get loadError => _loadError;
+
+  /// Re-subscribes to the live job list after a failure.
+  void retryLoad() {
+    _loadError = null;
+    _isLoading = FirebaseService.isInitialized;
+    notifyListeners();
+    _subscribe();
+  }
 
   /// Reason the last write to the backend failed, if any.
   String? get lastError => _lastError;

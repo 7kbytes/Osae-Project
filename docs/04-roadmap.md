@@ -34,7 +34,13 @@ Exit: with the emulator, sign-up, post job, apply, accept, chat work end to end;
 Done and verified on the live site with Playwright: real sign-in, wrong-password rejection, session restore, post job, apply, chat (create and reply), poster review and accept, admin dashboard, and the deployed Firestore rules and indexes. Found and fixed R14 to R17 through those tests.
 Remaining: loading, error and empty states on all screens; data migration for existing documents; a repeatable end-to-end suite in the repo (currently ad-hoc scripts); Google sign-in on mobile; seeker-side status refresh check.
 
+### Phase 1 close-out (2026-09-21, branch phase-2-account-and-resilience)
+Done: loading and error states on the job feed (with retry); repeatable end-to-end suite in `e2e/` (5 scripts, 35 checks, all passing against the live site); a bug where the poster's applications and chat list were empty is fixed.
+Still open: loading and error states on the remaining screens; data migration (not needed yet: production holds only test data); seeker-side "accepted" refresh check; Google sign-in on mobile.
+
 ## Phase 2: Core product completion (about 2 to 3 weeks)
+
+Status: password reset (forgot password on the login screen) and self-service account deletion are done and verified live. Jobs posted by a deleted user are not removed yet (needs a Cloud Function, R13). Still to do: phone OTP, pagination, profile editing and avatars, push notifications, reports flow.
 
 - Phone verification (OTP) and password reset; account deletion.
 - Pagination, search, filters, map clustering.

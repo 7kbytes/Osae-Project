@@ -79,6 +79,21 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _handleForgotPassword() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final ok = await authProvider.sendPasswordReset(_emailController.text);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ok
+              ? 'If an account exists for that email, a reset link has been sent.'
+              : (authProvider.lastError ?? 'Could not send the reset email.'),
+        ),
+      ),
+    );
+  }
+
   void _showError(String? message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -328,7 +343,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  if (!_isSignUp)
+                    TextButton(
+                      onPressed: _isLoading ? null : _handleForgotPassword,
+                      child: const Text('Forgot password?'),
+                    ),
+                  const SizedBox(height: 8),
                   TextButton(
                     onPressed: () {
                       setState(() => _isSignUp = !_isSignUp);

@@ -6,6 +6,7 @@ abstract class UserRepository {
   Future<AppUser?> getUser(String userId);
   Future<void> saveUser(AppUser user);
   Future<void> updateUserRole(String userId, UserRole role);
+  Future<void> deleteUser(String userId);
 }
 
 class FirestoreUserRepository implements UserRepository {
@@ -36,6 +37,11 @@ class FirestoreUserRepository implements UserRepository {
   }
 
   @override
+  Future<void> deleteUser(String userId) async {
+    await _usersCollection.doc(userId).delete();
+  }
+
+  @override
   Future<void> updateUserRole(String userId, UserRole role) async {
     await _usersCollection.doc(userId).update({'role': role.name});
   }
@@ -57,6 +63,11 @@ class InMemoryUserRepository implements UserRepository {
   @override
   Future<void> saveUser(AppUser user) async {
     _users[user.id] = user;
+  }
+
+  @override
+  Future<void> deleteUser(String userId) async {
+    _users.remove(userId);
   }
 
   @override

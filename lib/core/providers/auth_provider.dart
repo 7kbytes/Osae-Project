@@ -158,6 +158,8 @@ class AuthProvider with ChangeNotifier {
         return 'No internet connection. Please try again.';
       case 'user-disabled':
         return 'This account has been disabled.';
+      case 'requires-recent-login':
+        return 'For security, please sign out, sign in again, then retry.';
       case 'popup-closed-by-user':
       case 'cancelled-popup-request':
         return 'Sign-in was cancelled.';
@@ -324,6 +326,67 @@ class AuthProvider with ChangeNotifier {
     _lastError = message;
     notifyListeners();
     return false;
+  }
+
+  /// Sends a password-reset email. Always reports success for well-formed
+  /// addresses so the response doesn't reveal whether an account exists.
+  Future<bool> sendPasswordReset(String email) async {
+    _lastError = null;
+    final address = email.trim();
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(address)) {
+      return _fail('Enter a valid email address.');
+    }
+    if (!_live) return true;
+    try {
+      await fb_auth.FirebaseAuth.instance.sendPasswordResetEmail(
+        email: address,
+      );
+      return true;
+    } on fb_auth.FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') return true;
+      return _fail(_messageFor(e));
+    } catch (e) {
+      debugPrint('Password reset error: $e');
+      return _fail('Could not send the reset email. Please try again.');
+    }
+  }
+
+  /// Permanently deletes the signed-in user's profile and login.
+  /// Jobs they posted are not removed (needs a server-side cascade, R13).
+  Future<bool> deleteAccount() async {
+    _lastError = null;
+    final user = _currentUser;
+    if (user == null) return _fail('Not signed in.');
+
+    if (_live) {
+      final fbUser = fb_auth.FirebaseAuth.instance.currentUser;
+      if (fbUser == null) return _fail('Not signed in.');
+      try {
+        // Profile first: once the login is deleted the rules no longer
+        // recognise the caller.
+        await _userRepository.deleteUser(user.id);
+        await fbUser.delete();
+      } on fb_auth.FirebaseAuthException catch (e) {
+        // Restore the profile if the login could not be deleted.
+        await _userRepository.saveUser(user);
+        return _fail(_messageFor(e));
+      } catch (e) {
+        debugPrint('Delete account error: $e');
+        try {
+          await _userRepository.saveUser(user);
+        } catch (_) {}
+        return _fail('Could not delete the account. Please try again.');
+      }
+    } else {
+      await _userRepository.deleteUser(user.id);
+    }
+
+    _isAuthenticated = false;
+    _currentUser = null;
+    _email = null;
+    await _localStorageService.clearUser();
+    notifyListeners();
+    return true;
   }
 
   // ---------------------------------------------------------------------------
