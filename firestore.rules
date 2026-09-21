@@ -136,6 +136,24 @@ service cloud.firestore {
       }
     }
 
+    // ---- reports -----------------------------------------------------------
+
+    match /reports/{reportId} {
+      // Reporters can see their own reports; admins see and handle them all.
+      allow read: if isOwner(resource.data.reporterId) || isAdmin();
+      allow create: if isSignedIn() &&
+        request.resource.data.reporterId == request.auth.uid &&
+        request.resource.data.status == 'open' &&
+        request.resource.data.targetType in ['job', 'user', 'message'] &&
+        isStr(request.resource.data.targetId, 200) &&
+        isStr(request.resource.data.reason, 200) &&
+        (!('note' in request.resource.data) ||
+          (request.resource.data.note is string &&
+           request.resource.data.note.size() <= 1000));
+      allow update: if isAdmin() && changedOnly(['status']);
+      allow delete: if isAdmin();
+    }
+
     // Everything else is denied by default.
   }
 }

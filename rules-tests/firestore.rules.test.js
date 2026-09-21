@@ -142,6 +142,34 @@ test('messages: members can only mark read; admin can delete', async () => {
   await assertSucceeds(deleteDoc(doc(as('admin1'), 'chats/c1/messages/m1')));
 });
 
+// ---- reports ----
+const report = (over = {}) => ({
+  targetType: 'job', targetId: 'j1', targetTitle: 'Clean office', reporterId: 'seeker1',
+  reason: 'Scam or upfront fee', note: '', status: 'open', ...over,
+});
+test('reports: signed-in user can file a report in their own name', async () => {
+  await assertSucceeds(setDoc(doc(as('seeker1'), 'reports/r1'), report()));
+  await assertFails(setDoc(doc(as('seeker1'), 'reports/r2'), report({ reporterId: 'other' })));
+  await assertFails(setDoc(doc(anon(), 'reports/r3'), report()));
+});
+test('reports: must start open and use a known target type', async () => {
+  await assertFails(setDoc(doc(as('seeker1'), 'reports/r4'), report({ status: 'resolved' })));
+  await assertFails(setDoc(doc(as('seeker1'), 'reports/r5'), report({ targetType: 'planet' })));
+  await assertFails(setDoc(doc(as('seeker1'), 'reports/r6'), report({ reason: '' })));
+});
+test('reports: reporter and admin can read, others cannot', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'reports/r7'), report()));
+  await assertSucceeds(getDoc(doc(as('seeker1'), 'reports/r7')));
+  await assertSucceeds(getDoc(doc(as('admin1'), 'reports/r7')));
+  await assertFails(getDoc(doc(as('other'), 'reports/r7')));
+});
+test('reports: only admin changes status, and nothing else', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'reports/r8'), report()));
+  await assertFails(updateDoc(doc(as('seeker1'), 'reports/r8'), { status: 'dismissed' }));
+  await assertSucceeds(updateDoc(doc(as('admin1'), 'reports/r8'), { status: 'resolved' }));
+  await assertFails(updateDoc(doc(as('admin1'), 'reports/r8'), { reason: 'edited' }));
+});
+
 // ---- admins and default deny ----
 test('admins collection is readable by self only and unwritable', async () => {
   await assertSucceeds(getDoc(doc(as('admin1'), 'admins/admin1')));

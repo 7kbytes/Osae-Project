@@ -6,6 +6,7 @@ import 'core/providers/application_provider.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/providers/chat_provider.dart';
 import 'core/providers/job_provider.dart';
+import 'core/repositories/report_repository.dart';
 import 'core/services/firebase_service.dart';
 import 'core/services/local_storage_service.dart';
 import 'features/auth/screens/login_screen.dart';
@@ -76,6 +77,11 @@ class LocalJobConnectorApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        Provider<ReportRepository>(
+          create: (_) => FirebaseService.isInitialized
+              ? FirestoreReportRepository()
+              : InMemoryReportRepository(),
+        ),
         // With real Firebase the session comes from FirebaseAuth; the demo
         // user is only used in explicit demo mode.
         ChangeNotifierProvider(

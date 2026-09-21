@@ -42,7 +42,7 @@ td.w{white-space:normal;min-width:180px;max-width:320px}
 th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;position:sticky;top:0;background:var(--card)}
 tr:last-child td{border-bottom:0}tr.click{cursor:pointer}tr.click:hover{background:var(--bg)}
 .tag{padding:2px 8px;border-radius:99px;font-size:12px;background:var(--bg);border:1px solid var(--line)}
-.t-open,.t-accepted,.t-completed{color:var(--ok)}.t-pending,.t-inProgress{color:var(--warn)}.t-rejected{color:var(--danger)}.t-admin{color:var(--info)}
+.t-resolved,.t-open,.t-accepted,.t-completed{color:var(--ok)}.t-dismissed{color:var(--muted)}.t-pending,.t-inProgress{color:var(--warn)}.t-rejected{color:var(--danger)}.t-admin{color:var(--info)}
 .empty{padding:30px;text-align:center;color:var(--muted)}
 .msgs{max-height:60vh;overflow:auto;display:flex;flex-direction:column;gap:6px}
 .msg{background:var(--bg);border-radius:8px;padding:7px 10px;display:flex;gap:8px;align-items:flex-start}.msg div{flex:1}.msg small{color:var(--muted)}
@@ -84,7 +84,7 @@ const auth=getAuth(app),db=getFirestore(app);
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const LIMIT=1000;
-const data={users:[],jobs:[],applications:[],chats:[]};
+const data={users:[],jobs:[],applications:[],chats:[],reports:[]};
 let unsubs=[],view="overview",filters={q:"",f:""};
 
 const date=v=>{if(!v)return"";const d=v.toDate?v.toDate():new Date(v);return isNaN(d)?"":d.toLocaleString()};
@@ -116,7 +116,7 @@ function start(){
   }
   buildNav();
 }
-const pages={overview:"Overview",users:"Users",jobs:"Jobs",applications:"Applications",chats:"Chats"};
+const pages={overview:"Overview",users:"Users",jobs:"Jobs",applications:"Applications",chats:"Chats",reports:"Reports"};
 function buildNav(){
   $("#nav").innerHTML=Object.entries(pages).map(([k,v])=>`<button data-v="${k}" class="${k===view?"on":""}">${v}</button>`).join("");
   $("#nav").onclick=e=>{const v=e.target.dataset.v;if(v){view=v;filters={q:"",f:""};buildNav();render()}};
@@ -183,6 +183,15 @@ applications:{rows:()=>data.applications,sort:"appliedAt",filter:r=>r.status,opt
   handle(a,id,el){
     if(a==="status")act(()=>updateDoc(doc(db,"applications",id),{status:el.value}),"Application updated");
     if(a==="del"&&ask("Delete this application?"))act(()=>deleteDoc(doc(db,"applications",id)),"Application deleted");}},
+reports:{rows:()=>data.reports,sort:"createdAt",filter:r=>r.status,opts:["open","resolved","dismissed"],
+  cols:[["Reported",r=>esc(r.targetTitle||r.targetId),"w"],["Type",r=>esc(r.targetType)],["Reason",r=>esc(r.reason),"w"],["Details",r=>esc(r.note),"w"],["Status",r=>tag(r.status)],["Filed",r=>date(r.createdAt)]],
+  actions:r=>sel("status",r.id,r.status,["open","resolved","dismissed"])+" "+(r.targetType==="job"?`<button class="btn s d" data-a="rmjob" data-id="${esc(r.id)}">Remove job</button> `:"")+del("del",r.id),
+  handle(a,id,el){
+    const rep=data.reports.find(x=>x.id===id);
+    if(a==="status")act(()=>updateDoc(doc(db,"reports",id),{status:el.value}),"Report updated");
+    if(a==="rmjob"&&rep&&ask("Delete the reported job and mark this report resolved?"))act(async()=>{
+      await deleteDoc(doc(db,"jobs",rep.targetId));await updateDoc(doc(db,"reports",id),{status:"resolved"})},"Job removed, report resolved");
+    if(a==="del"&&ask("Delete this report?"))act(()=>deleteDoc(doc(db,"reports",id)),"Report deleted");}},
 chats:{rows:()=>data.chats,sort:"updatedAt",
   cols:[["Job",r=>esc(r.jobTitle),"w"],["Seeker",r=>esc(r.seekerName)],["Poster",r=>esc(r.posterName)],["Last message",r=>esc(r.lastMessage),"w"],["Updated",r=>date(r.updatedAt)]],
   actions:r=>`<button class="btn s" data-a="view" data-id="${esc(r.id)}">Open</button> `+del("del",r.id),
@@ -207,6 +216,7 @@ function overview(){
    <div class="stat"><b>${d.jobs.length}</b><span>Jobs (${open} open)</span></div>
    <div class="stat"><b>${d.applications.length}</b><span>Applications (${pend} pending)</span></div>
    <div class="stat"><b>${d.chats.length}</b><span>Chat rooms</span></div>
+   <div class="stat"><b>${d.reports.filter(r=>r.status==="open").length}</b><span>Open reports</span></div>
    <div class="stat"><b>${avg}</b><span>Avg. pay rate</span></div></div>
   <div class="cols">
    <div class="panel"><h3>Users by role</h3>${bars(count(d.users,u=>u.role))}</div>
@@ -216,7 +226,7 @@ function overview(){
    <div class="panel"><h3>Jobs by status</h3>${bars(count(d.jobs,j=>j.status||"open"))}</div>
    <div class="panel"><h3>Applications by status</h3>${bars(count(d.applications,a=>a.status))}</div>
   </div>
-  ${[d.users,d.jobs,d.applications,d.chats].some(a=>a.length>=LIMIT)?`<p style="color:var(--muted)">Showing the first ${LIMIT} documents per collection.</p>`:""}`;
+  ${[d.users,d.jobs,d.applications,d.chats,d.reports].some(a=>a.length>=LIMIT)?`<p style="color:var(--muted)">Showing the first ${LIMIT} documents per collection.</p>`:""}`;
 }
 
 // ---------- chat viewer ----------

@@ -3,11 +3,13 @@ import 'package:provider/provider.dart';
 import '../../../app/theme.dart';
 import '../../../core/models/job_application_model.dart';
 import '../../../core/models/job_model.dart';
+import '../../../core/models/report_model.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/providers/application_provider.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/chat_provider.dart';
 import '../../../core/providers/job_provider.dart';
+import '../../../core/repositories/report_repository.dart';
 import '../../../core/utils/form_validators.dart';
 import '../../../core/utils/input_sanitizer.dart';
 import '../../applications/screens/applicant_review_screen.dart';
@@ -253,6 +255,84 @@ class JobDetailScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _reportJob(
+    BuildContext context,
+    JobPost job,
+    String reporterId,
+  ) async {
+    String reason = Report.reasons.first;
+    final noteController = TextEditingController();
+    final submit = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('Report this job'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: reason,
+                isExpanded: true,
+                items: [
+                  for (final r in Report.reasons)
+                    DropdownMenuItem(value: r, child: Text(r)),
+                ],
+                onChanged: (v) => setLocal(() => reason = v ?? reason),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: noteController,
+                maxLength: 500,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Details (optional)',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Submit report'),
+            ),
+          ],
+        ),
+      ),
+    );
+    final note = InputSanitizer.sanitize(noteController.text);
+    noteController.dispose();
+    if (submit != true || !context.mounted) return;
+
+    final repo = context.read<ReportRepository>();
+    String message;
+    try {
+      await repo.submitReport(
+        Report(
+          id: 'rep_${DateTime.now().millisecondsSinceEpoch}_$reporterId',
+          targetType: ReportTarget.job,
+          targetId: job.id,
+          targetTitle: job.title,
+          reporterId: reporterId,
+          reason: reason,
+          note: note,
+          createdAt: DateTime.now(),
+        ),
+      );
+      message = 'Thanks. Our team will review this job.';
+    } catch (e) {
+      debugPrint('submitReport failed: $e');
+      message = 'Could not send the report. Please try again.';
+    }
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final jobProvider = Provider.of<JobProvider>(context);
@@ -370,6 +450,13 @@ class JobDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Job Details'),
         actions: [
+          if (currentUser != null && currentUser.id != job.posterId)
+            IconButton(
+              key: const Key('report_job_button'),
+              tooltip: 'Report this job',
+              icon: const Icon(Icons.flag_outlined, color: Colors.white),
+              onPressed: () => _reportJob(context, job, currentUser.id),
+            ),
           IconButton(
             icon: Icon(
               isFav ? Icons.favorite : Icons.favorite_border,

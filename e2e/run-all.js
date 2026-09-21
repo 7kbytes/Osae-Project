@@ -1,6 +1,6 @@
 // Runs every end-to-end script; exits non-zero if any check fails.
 const {spawnSync}=require('child_process');
-const scripts=['auth.js','marketplace-flow.js','poster-flow.js','account.js','admin.js'];
+const scripts=['auth.js','marketplace-flow.js','poster-flow.js','account.js','reports.js','admin.js'];
 let failed=0;
 for(const s of scripts){
  console.log('\n=== '+s+' ===');

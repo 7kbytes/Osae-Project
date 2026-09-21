@@ -40,7 +40,7 @@ Still open: loading and error states on the remaining screens; data migration (n
 
 ## Phase 2: Core product completion (about 2 to 3 weeks)
 
-Status: password reset (forgot password on the login screen) and self-service account deletion are done and verified live. Jobs posted by a deleted user are not removed yet (needs a Cloud Function, R13). Still to do: phone OTP, pagination, profile editing and avatars, push notifications, reports flow.
+Status: password reset (forgot password on the login screen) and self-service account deletion are done and verified live. Jobs posted by a deleted user are not removed yet (needs a Cloud Function, R13). Reports flow done and verified live (2026-09-21): seekers can report a job (reason and details), reports land in the admin dashboard Reports queue where an admin can dismiss, resolve or remove the job; Firestore rules and 4 rule tests cover it. Still to do: phone OTP (needs Phone sign-in enabled in Firebase and the paid Blaze plan), pagination, profile editing and avatars, push notifications, reporting users and messages.
 
 - Phone verification (OTP) and password reset; account deletion.
 - Pagination, search, filters, map clustering.
