@@ -207,9 +207,24 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: filteredJobs.length,
+                    itemCount:
+                        filteredJobs.length + (jobProvider.hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
-                      return JobCard(job: filteredJobs[index]);
+                      if (index < filteredJobs.length) {
+                        return JobCard(job: filteredJobs[index]);
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Center(
+                          child: jobProvider.isLoadingMore
+                              ? const CircularProgressIndicator()
+                              : OutlinedButton(
+                                  key: const Key('load_more_jobs_button'),
+                                  onPressed: jobProvider.loadMore,
+                                  child: const Text('Load more jobs'),
+                                ),
+                        ),
+                      );
                     },
                   ),
           ),

@@ -392,45 +392,19 @@ class JobDetailScreen extends StatelessWidget {
     }
 
     if (matchingJob == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Job Details')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.search_off, size: 64, color: Colors.grey.shade400),
-                const SizedBox(height: 16),
-                const Text(
-                  'Job Not Found',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textDark,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'This job listing is no longer available or does not exist.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: AppTheme.textMuted),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton.icon(
-                  key: const Key('return_to_jobs_feed_button'),
-                  onPressed: () {
-                    if (Navigator.canPop(context)) {
-                      Navigator.pop(context);
-                    }
-                  },
-                  icon: const Icon(Icons.arrow_back),
-                  label: const Text('Return to Jobs Feed'),
-                ),
-              ],
-            ),
-          ),
-        ),
+      // Not in the loaded feed pages: fetch it by id before giving up. When it
+      // arrives the provider notifies and this screen rebuilds with the job.
+      return FutureBuilder<JobPost?>(
+        future: jobProvider.ensureJob(jobId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Job Details')),
+              body: const Center(child: CircularProgressIndicator()),
+            );
+          }
+          return _buildNotFound(context);
+        },
       );
     }
 
@@ -992,6 +966,49 @@ class JobDetailScreen extends StatelessWidget {
                   ),
                 ),
               ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotFound(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Job Details')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.search_off, size: 64, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              const Text(
+                'Job Not Found',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'This job listing is no longer available or does not exist.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                key: const Key('return_to_jobs_feed_button'),
+                onPressed: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  }
+                },
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Return to Jobs Feed'),
+              ),
             ],
           ),
         ),

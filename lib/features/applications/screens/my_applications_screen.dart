@@ -4,7 +4,6 @@ import '../../../app/theme.dart';
 import '../../../core/models/job_application_model.dart';
 import '../../../core/providers/application_provider.dart';
 import '../../../core/providers/auth_provider.dart';
-import '../../../core/providers/job_provider.dart';
 import '../../jobs/screens/job_detail_screen.dart';
 
 class MyApplicationsScreen extends StatelessWidget {
@@ -40,7 +39,6 @@ class MyApplicationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final applicationProvider = Provider.of<ApplicationProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final jobProvider = Provider.of<JobProvider>(context, listen: false);
 
     final currentUserId = authProvider.currentUser?.id ?? '';
     final applications = applicationProvider.getApplicationsForSeeker(
@@ -120,17 +118,12 @@ class MyApplicationsScreen extends StatelessWidget {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(14),
                     onTap: () {
-                      final jobExists = jobProvider.allJobs.any(
-                        (j) => j.id == app.jobId,
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => JobDetailScreen(jobId: app.jobId),
+                        ),
                       );
-                      if (jobExists) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => JobDetailScreen(jobId: app.jobId),
-                          ),
-                        );
-                      }
                     },
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -219,18 +212,13 @@ class MyApplicationsScreen extends StatelessWidget {
                               const Spacer(),
                               TextButton.icon(
                                 onPressed: () {
-                                  final jobExists = jobProvider.allJobs.any(
-                                    (j) => j.id == app.jobId,
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          JobDetailScreen(jobId: app.jobId),
+                                    ),
                                   );
-                                  if (jobExists) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            JobDetailScreen(jobId: app.jobId),
-                                      ),
-                                    );
-                                  }
                                 },
                                 icon: const Icon(Icons.arrow_forward, size: 14),
                                 label: const Text('View Job'),

@@ -8,6 +8,7 @@ abstract class JobRepository {
     String? city,
     String? category,
     String? search,
+    int? limit,
   });
   Future<List<JobPost>> getJobs({String? city, String? category});
   Future<JobPost?> getJobById(String jobId);
@@ -34,6 +35,7 @@ class FirestoreJobRepository implements JobRepository {
     String? city,
     String? category,
     String? search,
+    int? limit,
   }) {
     Query<Map<String, dynamic>> query = _jobsCollection.orderBy(
       'createdAt',
@@ -46,6 +48,7 @@ class FirestoreJobRepository implements JobRepository {
     if (category != null && category != 'All' && category.isNotEmpty) {
       query = query.where('category', isEqualTo: category);
     }
+    if (limit != null) query = query.limit(limit);
 
     return query.snapshots().map((snapshot) {
       var list = snapshot.docs
@@ -178,12 +181,14 @@ class InMemoryJobRepository implements JobRepository {
     String? city,
     String? category,
     String? search,
+    int? limit,
   }) {
     // Initial emit
     Timer.run(_notifyJobs);
 
     return _jobsStreamController.stream.map((list) {
-      return list.where((job) {
+      final page = limit == null ? list : list.take(limit);
+      return page.where((job) {
         final matchesCity = city == null || city == 'All' || job.city == city;
         final matchesCategory =
             category == null || category == 'All' || job.category == category;
