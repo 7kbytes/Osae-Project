@@ -24,20 +24,27 @@ class ChatRoomScreen extends StatefulWidget {
 class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final TextEditingController _textController = TextEditingController();
 
-  void _sendMessage() {
-    if (_textController.text.trim().isEmpty) return;
+  Future<void> _sendMessage() async {
+    final text = _textController.text.trim();
+    if (text.isEmpty) return;
 
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     final me = Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (me == null) return;
-    chatProvider.sendMessage(
+    _textController.clear();
+    final sent = await chatProvider.sendMessage(
       roomId: widget.roomId,
       senderId: me.id,
       senderName: me.displayName,
-      text: _textController.text.trim(),
+      text: text,
     );
+    if (sent || !mounted) return;
 
-    _textController.clear();
+    // Give the text back so the user can retry without retyping.
+    if (_textController.text.isEmpty) _textController.text = text;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(chatProvider.sendError ?? 'Message not sent.')),
+    );
   }
 
   @override

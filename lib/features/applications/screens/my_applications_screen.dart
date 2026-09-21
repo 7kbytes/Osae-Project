@@ -42,14 +42,32 @@ class MyApplicationsScreen extends StatelessWidget {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final jobProvider = Provider.of<JobProvider>(context, listen: false);
 
-    final currentUserId = authProvider.currentUser?.id ?? 'seeker_001';
+    final currentUserId = authProvider.currentUser?.id ?? '';
     final applications = applicationProvider.getApplicationsForSeeker(
       currentUserId,
     );
 
     return Scaffold(
       appBar: AppBar(title: const Text('My Applications')),
-      body: applications.isEmpty
+      body: (applicationProvider.isLoading && applications.isEmpty)
+          ? const Center(child: CircularProgressIndicator())
+          : (applicationProvider.loadError != null && applications.isEmpty)
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.cloud_off, size: 56),
+                  const SizedBox(height: 12),
+                  Text(applicationProvider.loadError!),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: applicationProvider.retryLoad,
+                    child: const Text('Try again'),
+                  ),
+                ],
+              ),
+            )
+          : applications.isEmpty
           ? Center(
               child: Padding(
                 padding: const EdgeInsets.all(32.0),

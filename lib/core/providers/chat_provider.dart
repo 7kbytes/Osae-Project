@@ -57,16 +57,47 @@ class ChatProvider with ChangeNotifier {
 
   void _subscribeToRooms(String userId) {
     _roomsSubscription?.cancel();
-    _roomsSubscription = _chatRepository.getChatRoomsStream(userId).listen((
-      updatedRooms,
-    ) {
-      // Against Firestore an empty list is real; offline/demo keeps the cache.
-      if (updatedRooms.isNotEmpty || FirebaseService.isInitialized) {
-        _rooms = List.from(updatedRooms);
-        _localStorageService.saveChatRooms(_rooms);
-        notifyListeners();
-      }
-    });
+    _loadError = null;
+    _isLoading = FirebaseService.isInitialized && _rooms.isEmpty;
+    _roomsSubscription = _chatRepository
+        .getChatRoomsStream(userId)
+        .listen(
+          (updatedRooms) {
+            final wasLoading = _isLoading || _loadError != null;
+            _isLoading = false;
+            _loadError = null;
+            // Against Firestore an empty list is real; offline/demo keeps the cache.
+            if (updatedRooms.isNotEmpty || FirebaseService.isInitialized) {
+              _rooms = List.from(updatedRooms);
+              _localStorageService.saveChatRooms(_rooms);
+              notifyListeners();
+            } else if (wasLoading) {
+              notifyListeners();
+            }
+          },
+          onError: (Object e) {
+            debugPrint('Chat rooms stream error: $e');
+            _isLoading = false;
+            _loadError = 'Could not load chats. Check your connection.';
+            notifyListeners();
+          },
+        );
+  }
+
+  bool _isLoading = false;
+  String? _loadError;
+
+  /// True until the first chat list arrives from the backend.
+  bool get isLoading => _isLoading;
+
+  /// Set when the live chat list could not be loaded.
+  String? get loadError => _loadError;
+
+  /// Re-subscribes to the chat list after a failure.
+  void retryLoad() {
+    if (_currentUserId.isEmpty) return;
+    _subscribeToRooms(_currentUserId);
+    notifyListeners();
   }
 
   /// Re-binds the provider to the signed-in user (called when auth changes).
@@ -79,6 +110,8 @@ class ChatProvider with ChangeNotifier {
     _messageSubscriptions.clear();
     _messagesPerRoom.clear();
     _rooms = [];
+    _isLoading = false;
+    _loadError = null;
     if (userId.isNotEmpty) _subscribeToRooms(userId);
     notifyListeners();
   }
@@ -176,13 +209,21 @@ class ChatProvider with ChangeNotifier {
     return newRoomId;
   }
 
-  void sendMessage({
+  String? _sendError;
+
+  /// Set when the last message could not be sent; cleared on the next send.
+  String? get sendError => _sendError;
+
+  /// Shows the message immediately, then removes it again and sets
+  /// [sendError] if the backend rejects it. Returns whether it was saved.
+  Future<bool> sendMessage({
     required String roomId,
     required String senderId,
     required String senderName,
     required String text,
-  }) {
-    if (text.trim().isEmpty) return;
+  }) async {
+    if (text.trim().isEmpty) return false;
+    _sendError = null;
 
     final newMessage = ChatMessage(
       id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
@@ -200,6 +241,7 @@ class ChatProvider with ChangeNotifier {
     _messagesPerRoom[roomId]!.add(newMessage);
 
     final roomIndex = _rooms.indexWhere((r) => r.id == roomId);
+    final previousRoom = roomIndex != -1 ? _rooms[roomIndex] : null;
     if (roomIndex != -1) {
       final updatedRoom = _rooms[roomIndex].copyWith(
         lastMessage: text.trim(),
@@ -214,7 +256,22 @@ class ChatProvider with ChangeNotifier {
 
     notifyListeners();
 
-    _chatRepository.sendMessage(roomId, newMessage);
+    try {
+      await _chatRepository.sendMessage(roomId, newMessage);
+    } catch (e) {
+      debugPrint('ChatProvider.sendMessage error: $e');
+      _messagesPerRoom[roomId]?.removeWhere((m) => m.id == newMessage.id);
+      if (previousRoom != null) {
+        final i = _rooms.indexWhere((r) => r.id == roomId);
+        if (i != -1) _rooms[i] = previousRoom;
+      }
+      _localStorageService.saveMessages(roomId, _messagesPerRoom[roomId] ?? []);
+      _localStorageService.saveChatRooms(_rooms);
+      _sendError = 'Message not sent. Please try again.';
+      notifyListeners();
+      return false;
+    }
+    return true;
   }
 
   @override

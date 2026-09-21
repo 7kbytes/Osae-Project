@@ -20,7 +20,7 @@ Severity: **C**ritical, **H**igh, **M**edium. Status as of 2026-09-20.
 | R12 | M | Admin authorisation via a Firestore doc; no audit trail; no MFA | `web/admin` | Custom claims, `auditLogs`, MFA (doc 05) | Open |
 | R13 | M | Deleting a user profile leaves the Auth account and related data | admin | Cloud Function cascade | Open |
 | R14 | H | Job screen hard-coded `posterId: 'poster_001'`, chat screen hard-coded sender `seeker_001`, favourites used a default user id, so real writes were rejected or attributed to the wrong user | `create_job_screen`, `chat_room_screen`, favourites | Use the signed-in user everywhere | Fixed, verified live |
-| R15 | H | Providers swallowed write failures (`catch (_) {}`) and kept the optimistic change, so users saw success for data that was never saved | `job_provider`, `application_provider` | Roll back and report failure | Fixed (unit tests) |
+| R15 | H | Providers swallowed write failures (`catch (_) {}`) and kept the optimistic change, so users saw success for data that was never saved | `job_provider`, `application_provider`, `chat_provider` (message send) | Roll back and report failure | Fixed (unit tests); chat send fixed 2026-09-21 |
 | R16 | H | `ApplicationProvider` never read from Firestore (local cache only), so posters never saw applicants | `application_provider` | Live streams bound to the signed-in user | Fixed, verified live |
 | R17 | M | Chat room ids differed between client and Firestore; chat list showed the wrong party's name; chat and job providers were not bound to the signed-in user or role | chat and job providers | Deterministic `chat_<job>_<seeker>` ids, user-bound providers | Fixed, verified live |
 

@@ -17,7 +17,25 @@ class ChatListScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Messages & Direct Chat')),
-      body: rooms.isEmpty
+      body: (chatProvider.isLoading && rooms.isEmpty)
+          ? const Center(child: CircularProgressIndicator())
+          : (chatProvider.loadError != null && rooms.isEmpty)
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.cloud_off, size: 56),
+                  const SizedBox(height: 12),
+                  Text(chatProvider.loadError!),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: chatProvider.retryLoad,
+                    child: const Text('Try again'),
+                  ),
+                ],
+              ),
+            )
+          : rooms.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

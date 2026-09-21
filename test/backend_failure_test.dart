@@ -40,6 +40,38 @@ class DenyingApplicationRepository extends InMemoryApplicationRepository {
   ) async => throw Exception('permission-denied');
 }
 
+/// Simulates the live application queries failing (e.g. offline or denied).
+class FailingStreamApplicationRepository extends InMemoryApplicationRepository {
+  FailingStreamApplicationRepository({super.localStorageService});
+
+  bool fail = true;
+
+  @override
+  Stream<List<JobApplication>> getSeekerApplications(String seekerId) => fail
+      ? Stream.error(Exception('unavailable'))
+      : super.getSeekerApplications(seekerId);
+
+  @override
+  Stream<List<JobApplication>> getPosterApplications(String posterId) => fail
+      ? Stream.error(Exception('unavailable'))
+      : super.getPosterApplications(posterId);
+}
+
+class DenyingChatRepository extends InMemoryChatRepository {
+  @override
+  Future<void> sendMessage(String chatRoomId, ChatMessage message) async =>
+      throw Exception('permission-denied');
+}
+
+class FailingStreamChatRepository extends InMemoryChatRepository {
+  bool fail = true;
+
+  @override
+  Stream<List<ChatRoom>> getChatRoomsStream(String userId) => fail
+      ? Stream.error(Exception('unavailable'))
+      : super.getChatRoomsStream(userId);
+}
+
 JobPost _job(String id) => JobPost(
   id: id,
   title: 'Test job $id',
@@ -150,6 +182,86 @@ void main() {
       expect(ok, isFalse);
       expect(provider.hasApplied('j1', 'seeker1'), isFalse);
       expect(provider.errorMessage, isNotNull);
+    });
+  });
+
+  group('Load failures surface as errors, not empty lists', () {
+    test('applications: loadError is set, then cleared by retryLoad', () async {
+      final repo = FailingStreamApplicationRepository(
+        localStorageService: storage,
+      );
+      final provider = ApplicationProvider(
+        applicationRepository: repo,
+        localStorageService: storage,
+      );
+
+      provider.bindUser('seeker1');
+      expect(provider.isLoading, isTrue);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(provider.isLoading, isFalse);
+      expect(provider.loadError, isNotNull);
+      expect(provider.errorMessage, isNull);
+
+      repo.fail = false;
+      provider.retryLoad();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(provider.loadError, isNull);
+      expect(provider.isLoading, isFalse);
+    });
+
+    test('chats: loadError is set, then cleared by retryLoad', () async {
+      final repo = FailingStreamChatRepository();
+      final provider = ChatProvider(
+        chatRepository: repo,
+        localStorageService: storage,
+        currentUserId: 'seekerA',
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(provider.loadError, isNotNull);
+      expect(provider.isLoading, isFalse);
+
+      repo.fail = false;
+      provider.retryLoad();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(provider.loadError, isNull);
+    });
+  });
+
+  group('ChatProvider when the backend rejects a message', () {
+    test('sendMessage removes the message and reports failure', () async {
+      final provider = ChatProvider(
+        chatRepository: DenyingChatRepository(),
+        localStorageService: storage,
+        currentUserId: 'seekerA',
+      );
+      final roomId = provider.getOrCreateRoom(
+        jobId: 'job1',
+        jobTitle: 'Job',
+        seekerId: 'seekerA',
+        seekerName: 'A',
+        posterId: 'poster1',
+        posterName: 'P',
+      );
+      final before = provider.getMessages(roomId).length;
+
+      final sent = await provider.sendMessage(
+        roomId: roomId,
+        senderId: 'seekerA',
+        senderName: 'A',
+        text: 'hello',
+      );
+
+      expect(sent, isFalse);
+      expect(provider.sendError, isNotNull);
+      expect(
+        provider.getMessages(roomId).any((m) => m.text == 'hello'),
+        isFalse,
+      );
+      expect(provider.getMessages(roomId).length, before);
     });
   });
 

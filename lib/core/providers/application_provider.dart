@@ -18,6 +18,9 @@ class ApplicationProvider with ChangeNotifier {
   StreamSubscription<List<JobApplication>>? _posterSub;
   List<JobApplication> _asSeeker = [];
   List<JobApplication> _asPoster = [];
+  bool _seekerLoaded = false;
+  bool _posterLoaded = false;
+  String? _loadError;
 
   ApplicationProvider({
     ApplicationRepository? applicationRepository,
@@ -50,32 +53,52 @@ class ApplicationProvider with ChangeNotifier {
   void bindUser(String userId) {
     if (userId == _boundUserId) return;
     _boundUserId = userId;
-    _seekerSub?.cancel();
-    _posterSub?.cancel();
     _asSeeker = [];
     _asPoster = [];
     _applications = [];
     _currentSeekerId = userId.isEmpty ? null : userId;
     _errorMessage = null;
+    _subscribe();
+    notifyListeners();
+  }
 
-    if (userId.isNotEmpty) {
-      _seekerSub = _applicationRepository.getSeekerApplications(userId).listen((
-        list,
-      ) {
-        _asSeeker = list;
-        _mergeStreams();
-      }, onError: _onStreamError);
-      _posterSub = _applicationRepository.getPosterApplications(userId).listen((
-        list,
-      ) {
-        _asPoster = list;
-        _mergeStreams();
-      }, onError: _onStreamError);
-    }
+  void _subscribe() {
+    _seekerSub?.cancel();
+    _posterSub?.cancel();
+    _seekerSub = null;
+    _posterSub = null;
+    _loadError = null;
+    final userId = _boundUserId ?? '';
+    _seekerLoaded = userId.isEmpty;
+    _posterLoaded = userId.isEmpty;
+    _isLoading = userId.isNotEmpty;
+    if (userId.isEmpty) return;
+
+    _seekerSub = _applicationRepository.getSeekerApplications(userId).listen((
+      list,
+    ) {
+      _asSeeker = list;
+      _seekerLoaded = true;
+      _mergeStreams();
+    }, onError: _onStreamError);
+    _posterSub = _applicationRepository.getPosterApplications(userId).listen((
+      list,
+    ) {
+      _asPoster = list;
+      _posterLoaded = true;
+      _mergeStreams();
+    }, onError: _onStreamError);
+  }
+
+  /// Re-subscribes to the signed-in user's applications after a failure.
+  void retryLoad() {
+    _subscribe();
     notifyListeners();
   }
 
   void _mergeStreams() {
+    _isLoading = !(_seekerLoaded && _posterLoaded);
+    _loadError = null;
     final byId = <String, JobApplication>{
       for (final a in _asPoster) a.id: a,
       for (final a in _asSeeker) a.id: a,
@@ -88,7 +111,8 @@ class ApplicationProvider with ChangeNotifier {
 
   void _onStreamError(Object e) {
     debugPrint('ApplicationProvider stream error: $e');
-    _errorMessage = 'Could not load applications.';
+    _isLoading = false;
+    _loadError = 'Could not load applications. Check your connection.';
     notifyListeners();
   }
 
@@ -116,6 +140,9 @@ class ApplicationProvider with ChangeNotifier {
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  /// Set when the live application lists could not be loaded.
+  String? get loadError => _loadError;
   String? get currentSeekerId => _currentSeekerId;
 
   // ---------------------------------------------------------------------------
