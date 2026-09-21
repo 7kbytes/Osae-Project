@@ -37,7 +37,8 @@ Remaining: loading, error and empty states on all screens; data migration for ex
 ### Phase 1 close-out (2026-09-21, branch phase-2-account-and-resilience)
 Done: loading and error states on the job feed (with retry); repeatable end-to-end suite in `e2e/` (5 scripts, 35 checks, all passing against the live site); a bug where the poster's applications and chat list were empty is fixed.
 Update: loading and error states (with retry) added to My Applications and the chat list, backed by `loadError`/`retryLoad` on `ApplicationProvider` and `ChatProvider`; My Applications no longer falls back to the `seeker_001` demo id. Chat messages that the backend rejects are now removed and reported instead of staying on screen (R15). Analyze clean; 225 tests pass.
-Still open: loading and error states on the remaining screens (job detail, applicant review, chat room, favourites, map); data migration (not needed yet: production holds only test data); seeker-side "accepted" refresh check; Google sign-in on mobile.
+Update: job detail, applicant review, favourites and map now show loading and error states with retry. Job detail no longer acts as a fake "Kofi Mensah / seeker_001" user when signed out: Apply and Chat are disabled instead (R1; widget test added). 226 tests pass.
+Still open: loading state for the chat room message list; failures when creating a chat room are still not reported; `ChatProvider` still defaults to `seeker_001` when constructed without a user; data migration (not needed yet: production holds only test data); seeker-side "accepted" refresh check; Google sign-in on mobile.
 
 ## Phase 2: Core product completion (about 2 to 3 weeks)
 

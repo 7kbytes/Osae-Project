@@ -101,7 +101,42 @@ class _MapViewScreenState extends State<MapViewScreen> {
     }).toSet();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Map Explorer')),
+      appBar: AppBar(
+        title: const Text('Map Explorer'),
+        bottom: jobProvider.isLoading
+            ? const PreferredSize(
+                preferredSize: Size.fromHeight(4),
+                child: LinearProgressIndicator(),
+              )
+            : jobProvider.loadError != null
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(40),
+                child: Container(
+                  color: Colors.red.shade50,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.cloud_off, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          jobProvider.loadError!,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.textDark,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: jobProvider.retryLoad,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : null,
+      ),
       body: GlobalErrorBoundary(
         errorBuilder: (context, details, retry) {
           return _buildMapFallback(jobs);

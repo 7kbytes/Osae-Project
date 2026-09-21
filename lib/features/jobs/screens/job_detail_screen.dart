@@ -352,16 +352,43 @@ class JobDetailScreen extends StatelessWidget {
       chatProvider = Provider.of<ChatProvider>(context, listen: false);
     } catch (_) {}
 
+    // No fake fallback user (R1): signed-out viewers can read but not act.
     final currentUser = authProvider?.currentUser;
-    final currentUserId = currentUser?.id ?? 'seeker_001';
-    final currentUserName = currentUser?.displayName ?? 'Kofi Mensah';
-    final currentUserPhone = currentUser?.phone ?? '+233 24 123 4567';
+    final currentUserId = currentUser?.id ?? '';
 
     JobPost? matchingJob;
     try {
       matchingJob = jobProvider.allJobs.firstWhere((j) => j.id == jobId);
     } catch (_) {
       matchingJob = null;
+    }
+
+    if (matchingJob == null && jobProvider.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Job Details')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (matchingJob == null && jobProvider.loadError != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Job Details')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.cloud_off, size: 56),
+              const SizedBox(height: 12),
+              Text(jobProvider.loadError!),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: jobProvider.retryLoad,
+                child: const Text('Try again'),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     if (matchingJob == null) {
@@ -738,14 +765,16 @@ class JobDetailScreen extends StatelessWidget {
                     height: 52,
                     child: ElevatedButton.icon(
                       key: const Key('apply_for_job_button'),
-                      onPressed: job.status == JobStatus.completed
+                      onPressed:
+                          job.status == JobStatus.completed ||
+                              currentUser == null
                           ? null
                           : () => _showApplyBottomSheet(
                               context,
                               job: job,
-                              applicantId: currentUserId,
-                              defaultName: currentUserName,
-                              defaultPhone: currentUserPhone,
+                              applicantId: currentUser.id,
+                              defaultName: currentUser.displayName,
+                              defaultPhone: currentUser.phone,
                             ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
@@ -769,29 +798,29 @@ class JobDetailScreen extends StatelessWidget {
                   width: double.infinity,
                   height: 52,
                   child: OutlinedButton.icon(
-                    onPressed: () {
-                      final roomId =
-                          chatProvider?.getOrCreateRoom(
-                            jobId: job.id,
-                            jobTitle: job.title,
-                            seekerId: currentUserId,
-                            seekerName: currentUserName,
-                            posterId: job.posterId,
-                            posterName: job.posterName,
-                          ) ??
-                          'room_${job.id}_$currentUserId';
+                    onPressed: currentUser == null || chatProvider == null
+                        ? null
+                        : () {
+                            final roomId = chatProvider!.getOrCreateRoom(
+                              jobId: job.id,
+                              jobTitle: job.title,
+                              seekerId: currentUser.id,
+                              seekerName: currentUser.displayName,
+                              posterId: job.posterId,
+                              posterName: job.posterName,
+                            );
 
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ChatRoomScreen(
-                            roomId: roomId,
-                            jobTitle: job.title,
-                            otherUserName: job.posterName,
-                          ),
-                        ),
-                      );
-                    },
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatRoomScreen(
+                                  roomId: roomId,
+                                  jobTitle: job.title,
+                                  otherUserName: job.posterName,
+                                ),
+                              ),
+                            );
+                          },
                     icon: const Icon(Icons.chat_bubble_outline),
                     label: const Text('Start Chat with Employer'),
                   ),

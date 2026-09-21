@@ -6,7 +6,7 @@ Severity: **C**ritical, **H**igh, **M**edium. Status as of 2026-09-20.
 
 | ID | Sev | Risk | Where | Fix | Status |
 |---|---|---|---|---|---|
-| R1 | C | Sign-in accepts any credentials and falls back to a fake user; the app starts already logged in | `auth_provider.dart` | Real auth only; `startAuthenticated: false`; surface errors | Fixed on branch phase-1-real-backend (tests pass) |
+| R1 | C | Sign-in accepts any credentials and falls back to a fake user; the app starts already logged in | `auth_provider.dart` | Real auth only; `startAuthenticated: false`; surface errors | Fixed on branch phase-1-real-backend (tests pass); fake fallback user in the job detail screen removed 2026-09-21 |
 | R2 | C | `FirebaseService.initialize()` never called, so repositories use in-memory data in production | `main.dart`, `firebase_service.dart` | Initialise once at startup, set flag, verify repositories switch | Fixed on branch phase-1-real-backend |
 | R3 | C | Any signed-in user can read and write all `applications` and `chats` | `firestore.rules` | Scope to participants (section 3) | Rules written and tests authored; not yet run or deployed |
 | R4 | H | Any signed-in user can update any job (including `posterId`) | `firestore.rules` | Owner-only update with field validation | Rules written, tests authored; not yet deployed |

@@ -60,7 +60,25 @@ class ApplicantReviewScreen extends StatelessWidget {
           jobTitle.isNotEmpty ? 'Applicants: $jobTitle' : 'Review Applicants',
         ),
       ),
-      body: applications.isEmpty
+      body: (applicationProvider.isLoading && applications.isEmpty)
+          ? const Center(child: CircularProgressIndicator())
+          : (applicationProvider.loadError != null && applications.isEmpty)
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.cloud_off, size: 56),
+                  const SizedBox(height: 12),
+                  Text(applicationProvider.loadError!),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: applicationProvider.retryLoad,
+                    child: const Text('Try again'),
+                  ),
+                ],
+              ),
+            )
+          : applications.isEmpty
           ? Center(
               child: Padding(
                 padding: const EdgeInsets.all(32.0),
