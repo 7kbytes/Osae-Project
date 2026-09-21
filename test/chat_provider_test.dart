@@ -9,7 +9,10 @@ void main() {
 
     setUp(() {
       chatRepository = InMemoryChatRepository();
-      chatProvider = ChatProvider(chatRepository: chatRepository);
+      chatProvider = ChatProvider(
+        currentUserId: 'seeker_001',
+        chatRepository: chatRepository,
+      );
     });
 
     test('Initial chat rooms and messages loaded', () {

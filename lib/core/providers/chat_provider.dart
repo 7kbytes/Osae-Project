@@ -19,7 +19,7 @@ class ChatProvider with ChangeNotifier {
   ChatProvider({
     ChatRepository? chatRepository,
     LocalStorageService? localStorageService,
-    String currentUserId = 'seeker_001',
+    required String currentUserId,
   }) : _chatRepository =
            chatRepository ??
            (FirebaseService.isInitialized
@@ -109,6 +109,9 @@ class ChatProvider with ChangeNotifier {
     }
     _messageSubscriptions.clear();
     _messagesPerRoom.clear();
+    _loadingRooms.clear();
+    _messageErrors.clear();
+    _roomErrors.clear();
     _rooms = [];
     _isLoading = false;
     _loadError = null;
@@ -127,15 +130,54 @@ class ChatProvider with ChangeNotifier {
     }
 
     if (!_messageSubscriptions.containsKey(roomId)) {
-      _messageSubscriptions[roomId] = _chatRepository
-          .getMessagesStream(roomId)
-          .listen((messages) {
+      _subscribeToMessages(roomId);
+    }
+    return List.unmodifiable(_messagesPerRoom[roomId] ?? []);
+  }
+
+  final Set<String> _loadingRooms = {};
+  final Map<String, String> _messageErrors = {};
+  final Map<String, String> _roomErrors = {};
+
+  void _subscribeToMessages(String roomId) {
+    _messageErrors.remove(roomId);
+    if (FirebaseService.isInitialized && _messagesPerRoom[roomId] == null) {
+      _loadingRooms.add(roomId);
+    }
+    _messageSubscriptions[roomId] = _chatRepository
+        .getMessagesStream(roomId)
+        .listen(
+          (messages) {
+            _loadingRooms.remove(roomId);
+            _messageErrors.remove(roomId);
             _messagesPerRoom[roomId] = List.from(messages);
             _localStorageService.saveMessages(roomId, messages);
             notifyListeners();
-          });
-    }
-    return List.unmodifiable(_messagesPerRoom[roomId] ?? []);
+          },
+          onError: (Object e) {
+            debugPrint('Chat messages stream error ($roomId): $e');
+            _loadingRooms.remove(roomId);
+            _messageErrors[roomId] =
+                'Could not load messages. Check your connection.';
+            notifyListeners();
+          },
+        );
+  }
+
+  /// True until the first batch of messages for [roomId] arrives.
+  bool isLoadingMessages(String roomId) => _loadingRooms.contains(roomId);
+
+  /// Set when the messages for [roomId] could not be loaded.
+  String? messagesError(String roomId) => _messageErrors[roomId];
+
+  /// Set when the backend refused to create the chat room [roomId].
+  String? roomError(String roomId) => _roomErrors[roomId];
+
+  /// Re-subscribes to the messages for [roomId] after a failure.
+  void retryMessages(String roomId) {
+    _messageSubscriptions.remove(roomId)?.cancel();
+    _subscribeToMessages(roomId);
+    notifyListeners();
   }
 
   String getOrCreateRoom({
@@ -194,17 +236,31 @@ class ChatProvider with ChangeNotifier {
     _localStorageService.saveChatRooms(_rooms);
     _localStorageService.saveMessages(newRoomId, initialMsgs);
 
+    _roomErrors.remove(newRoomId);
     notifyListeners();
 
-    // Asynchronously call repository
-    _chatRepository.getOrCreateChatRoom(
-      jobId: jobId,
-      jobTitle: jobTitle,
-      seekerId: seekerId,
-      seekerName: seekerName,
-      posterId: posterId,
-      posterName: posterName,
-    );
+    // Created in the background; if the backend refuses, undo the local room
+    // so the user is not left chatting into a room that does not exist.
+    _chatRepository
+        .getOrCreateChatRoom(
+          jobId: jobId,
+          jobTitle: jobTitle,
+          seekerId: seekerId,
+          seekerName: seekerName,
+          posterId: posterId,
+          posterName: posterName,
+        )
+        .catchError((Object e) {
+          debugPrint('ChatProvider.getOrCreateRoom error: $e');
+          _rooms.removeWhere((r) => r.id == newRoomId);
+          _messagesPerRoom.remove(newRoomId);
+          _localStorageService.saveChatRooms(_rooms);
+          _localStorageService.saveMessages(newRoomId, const []);
+          _roomErrors[newRoomId] =
+              'Could not start this chat. Please try again.';
+          notifyListeners();
+          return newRoomId;
+        });
 
     return newRoomId;
   }

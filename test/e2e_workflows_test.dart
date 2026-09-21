@@ -60,7 +60,10 @@ Widget createTestE2EApp({
       ChangeNotifierProvider<ChatProvider>(
         create: (_) =>
             chatProvider ??
-            ChatProvider(chatRepository: InMemoryChatRepository()),
+            ChatProvider(
+              currentUserId: 'seeker_001',
+              chatRepository: InMemoryChatRepository(),
+            ),
       ),
     ],
     child: MaterialApp(theme: AppTheme.lightTheme, home: child),
@@ -969,6 +972,7 @@ void main() {
 
     test('3.3 Job Acceptance -> Chat Room Generation -> Direct Messaging', () {
       final chatProvider = ChatProvider(
+        currentUserId: 'seeker_001',
         chatRepository: chatRepo,
         localStorageService: storage,
       );
@@ -1346,6 +1350,7 @@ void main() {
         localStorageService: storage,
       );
       final chatProv = ChatProvider(
+        currentUserId: 'seeker_001',
         chatRepository: chatRepo,
         localStorageService: storage,
       );
@@ -1661,6 +1666,7 @@ void main() {
 
     test('Scenario 6: End-to-End Chat & Negotiation Flow', () {
       final chatProv = ChatProvider(
+        currentUserId: 'seeker_001',
         chatRepository: chatRepo,
         localStorageService: storage,
       );
@@ -1851,6 +1857,7 @@ void main() {
           localStorageService: storage,
         );
         final chatProv = ChatProvider(
+          currentUserId: 'seeker_001',
           chatRepository: chatRepo,
           localStorageService: storage,
         );

@@ -39,7 +39,11 @@ Widget createScenarioTestApp(
       ),
       ChangeNotifierProvider<ChatProvider>(
         create: (_) =>
-            chat ?? ChatProvider(chatRepository: InMemoryChatRepository()),
+            chat ??
+            ChatProvider(
+              currentUserId: 'seeker_001',
+              chatRepository: InMemoryChatRepository(),
+            ),
       ),
     ],
     child: MaterialApp(theme: AppTheme.lightTheme, home: homeWidget),
@@ -157,7 +161,10 @@ void main() {
           startAuthenticated: false,
         );
         final jobProvider = JobProvider(jobRepository: jobRepo);
-        final chatProvider = ChatProvider(chatRepository: chatRepo);
+        final chatProvider = ChatProvider(
+          currentUserId: 'seeker_001',
+          chatRepository: chatRepo,
+        );
 
         // 1. Sign up as Seeker in Accra
         final signupSuccess = await authProvider.signUpWithEmail(
@@ -224,6 +231,7 @@ void main() {
       (WidgetTester tester) async {
         final jobProvider = JobProvider(jobRepository: InMemoryJobRepository());
         final chatProvider = ChatProvider(
+          currentUserId: 'seeker_001',
           chatRepository: InMemoryChatRepository(),
         );
 
@@ -253,6 +261,7 @@ void main() {
       'Widget flow: ChatRoomScreen renders messages and sends new inquiry',
       (WidgetTester tester) async {
         final chatProvider = ChatProvider(
+          currentUserId: 'seeker_001',
           chatRepository: InMemoryChatRepository(),
         );
 

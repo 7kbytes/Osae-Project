@@ -89,6 +89,7 @@ void main() {
     );
 
     chatProvider = ChatProvider(
+      currentUserId: 'seeker_001',
       chatRepository: chatRepo,
       localStorageService: localStorageService,
     );

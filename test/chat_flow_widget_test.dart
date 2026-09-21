@@ -33,7 +33,11 @@ Widget createChatTestApp(
       ),
       ChangeNotifierProvider<ChatProvider>(
         create: (_) =>
-            chat ?? ChatProvider(chatRepository: InMemoryChatRepository()),
+            chat ??
+            ChatProvider(
+              currentUserId: 'seeker_001',
+              chatRepository: InMemoryChatRepository(),
+            ),
       ),
     ],
     child: MaterialApp(theme: AppTheme.lightTheme, home: homeWidget),
@@ -46,6 +50,7 @@ void main() {
       WidgetTester tester,
     ) async {
       final chatProvider = ChatProvider(
+        currentUserId: 'seeker_001',
         chatRepository: InMemoryChatRepository(),
       );
 
@@ -67,6 +72,7 @@ void main() {
       WidgetTester tester,
     ) async {
       final chatProvider = ChatProvider(
+        currentUserId: 'seeker_001',
         chatRepository: InMemoryChatRepository(),
       );
 
@@ -89,6 +95,7 @@ void main() {
       WidgetTester tester,
     ) async {
       final chatProvider = ChatProvider(
+        currentUserId: 'seeker_001',
         chatRepository: InMemoryChatRepository(),
       );
 

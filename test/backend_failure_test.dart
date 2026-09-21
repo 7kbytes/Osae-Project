@@ -63,6 +63,27 @@ class DenyingChatRepository extends InMemoryChatRepository {
       throw Exception('permission-denied');
 }
 
+class RoomDenyingChatRepository extends InMemoryChatRepository {
+  @override
+  Future<String> getOrCreateChatRoom({
+    required String jobId,
+    required String jobTitle,
+    required String seekerId,
+    required String seekerName,
+    required String posterId,
+    required String posterName,
+  }) async => throw Exception('permission-denied');
+}
+
+class FailingMessagesChatRepository extends InMemoryChatRepository {
+  bool fail = true;
+
+  @override
+  Stream<List<ChatMessage>> getMessagesStream(String chatRoomId) => fail
+      ? Stream.error(Exception('unavailable'))
+      : super.getMessagesStream(chatRoomId);
+}
+
 class FailingStreamChatRepository extends InMemoryChatRepository {
   bool fail = true;
 
@@ -262,6 +283,46 @@ void main() {
         isFalse,
       );
       expect(provider.getMessages(roomId).length, before);
+    });
+  });
+
+  group('ChatProvider room and message failures', () {
+    test('a room the backend refuses is removed and reported', () async {
+      final provider = ChatProvider(
+        chatRepository: RoomDenyingChatRepository(),
+        localStorageService: storage,
+        currentUserId: 'seekerA',
+      );
+      final roomId = provider.getOrCreateRoom(
+        jobId: 'job2',
+        jobTitle: 'Job',
+        seekerId: 'seekerA',
+        seekerName: 'A',
+        posterId: 'poster1',
+        posterName: 'P',
+      );
+      expect(provider.rooms.any((r) => r.id == roomId), isTrue);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(provider.rooms.any((r) => r.id == roomId), isFalse);
+      expect(provider.roomError(roomId), isNotNull);
+    });
+
+    test('message load failure is reported and retry clears it', () async {
+      final repo = FailingMessagesChatRepository();
+      final provider = ChatProvider(
+        chatRepository: repo,
+        localStorageService: storage,
+        currentUserId: 'seekerA',
+      );
+      provider.getMessages('room_x');
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(provider.messagesError('room_x'), isNotNull);
+
+      repo.fail = false;
+      provider.retryMessages('room_x');
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(provider.messagesError('room_x'), isNull);
     });
   });
 

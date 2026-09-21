@@ -55,7 +55,10 @@ Widget buildResiliencyTestApp(
       ChangeNotifierProvider<ChatProvider>(
         create: (_) =>
             chatProvider ??
-            ChatProvider(chatRepository: InMemoryChatRepository()),
+            ChatProvider(
+              currentUserId: 'seeker_001',
+              chatRepository: InMemoryChatRepository(),
+            ),
       ),
     ],
     child: MaterialApp(theme: AppTheme.lightTheme, home: child),

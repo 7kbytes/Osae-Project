@@ -304,7 +304,10 @@ void main() {
       'Chat messaging stress: rapid 50 messages, empty strings, and long payloads',
       () async {
         final chatRepo = InMemoryChatRepository();
-        final chatProvider = ChatProvider(chatRepository: chatRepo);
+        final chatProvider = ChatProvider(
+          currentUserId: 'seeker_001',
+          chatRepository: chatRepo,
+        );
 
         const roomId = 'stress_room_001';
 
@@ -446,7 +449,8 @@ void main() {
               create: (_) => jobProvider ?? JobProvider(),
             ),
             ChangeNotifierProvider<ChatProvider>(
-              create: (_) => chatProvider ?? ChatProvider(),
+              create: (_) =>
+                  chatProvider ?? ChatProvider(currentUserId: 'seeker_001'),
             ),
           ],
           child: MaterialApp(theme: AppTheme.lightTheme, home: child),
@@ -544,7 +548,10 @@ void main() {
         'ChatListScreen renders clean empty state when no chat rooms exist',
         (tester) async {
           final chatRepo = InMemoryChatRepository();
-          final chatProvider = ChatProvider(chatRepository: chatRepo);
+          final chatProvider = ChatProvider(
+            currentUserId: 'seeker_001',
+            chatRepository: chatRepo,
+          );
           await tester.pumpWidget(
             buildTestableWidget(
               const ChatListScreen(),

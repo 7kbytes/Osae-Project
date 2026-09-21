@@ -34,7 +34,11 @@ Widget createTestApp(
       ),
       ChangeNotifierProvider<ChatProvider>(
         create: (_) =>
-            chat ?? ChatProvider(chatRepository: InMemoryChatRepository()),
+            chat ??
+            ChatProvider(
+              currentUserId: 'seeker_001',
+              chatRepository: InMemoryChatRepository(),
+            ),
       ),
     ],
     child: MaterialApp(theme: AppTheme.lightTheme, home: homeWidget),

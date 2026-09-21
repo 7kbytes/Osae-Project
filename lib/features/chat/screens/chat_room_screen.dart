@@ -21,6 +21,34 @@ class ChatRoomScreen extends StatefulWidget {
   State<ChatRoomScreen> createState() => _ChatRoomScreenState();
 }
 
+class _StatusView extends StatelessWidget {
+  final String message;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  const _StatusView({
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.cloud_off, size: 56),
+          const SizedBox(height: 12),
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          OutlinedButton(onPressed: onAction, child: Text(actionLabel)),
+        ],
+      ),
+    );
+  }
+}
+
 class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final TextEditingController _textController = TextEditingController();
 
@@ -84,70 +112,88 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         children: [
           // Message List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                final msg = messages[index];
-                final isMe = msg.senderId == myId;
+            child: chatProvider.roomError(widget.roomId) != null
+                ? _StatusView(
+                    message: chatProvider.roomError(widget.roomId)!,
+                    actionLabel: 'Go back',
+                    onAction: () => Navigator.maybePop(context),
+                  )
+                : (chatProvider.isLoadingMessages(widget.roomId) &&
+                      messages.isEmpty)
+                ? const Center(child: CircularProgressIndicator())
+                : (chatProvider.messagesError(widget.roomId) != null &&
+                      messages.isEmpty)
+                ? _StatusView(
+                    message: chatProvider.messagesError(widget.roomId)!,
+                    actionLabel: 'Try again',
+                    onAction: () => chatProvider.retryMessages(widget.roomId),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: messages.length,
+                    itemBuilder: (context, index) {
+                      final msg = messages[index];
+                      final isMe = msg.senderId == myId;
 
-                return Align(
-                  alignment: isMe
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.75,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isMe ? AppTheme.primaryColor : Colors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(16),
-                        topRight: const Radius.circular(16),
-                        bottomLeft: Radius.circular(isMe ? 16 : 4),
-                        bottomRight: Radius.circular(isMe ? 4 : 16),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: isMe
-                          ? CrossAxisAlignment.end
-                          : CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          msg.text,
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: isMe ? Colors.white : AppTheme.textDark,
+                      return Align(
+                        alignment: isMe
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width * 0.75,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isMe ? AppTheme.primaryColor : Colors.white,
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(16),
+                              topRight: const Radius.circular(16),
+                              bottomLeft: Radius.circular(isMe ? 16 : 4),
+                              bottomRight: Radius.circular(isMe ? 4 : 16),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.04),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: isMe
+                                ? CrossAxisAlignment.end
+                                : CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                msg.text,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: isMe
+                                      ? Colors.white
+                                      : AppTheme.textDark,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                DateFormat('jm').format(msg.timestamp),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: isMe
+                                      ? Colors.white.withValues(alpha: 0.7)
+                                      : AppTheme.textMuted,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          DateFormat('jm').format(msg.timestamp),
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: isMe
-                                ? Colors.white.withValues(alpha: 0.7)
-                                : AppTheme.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
 
           // Message Input Field
