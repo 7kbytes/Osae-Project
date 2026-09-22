@@ -92,6 +92,13 @@ test('jobs: create requires own posterId and valid data', async () => {
   await assertFails(setDoc(doc(as('poster1'), 'jobs/j5'), job({ payRate: -1 })));
   await assertFails(setDoc(doc(as('poster1'), 'jobs/j6'), job({ status: 'weird' })));
 });
+test('jobs: search keywords must be a bounded list', async () => {
+  await assertSucceeds(setDoc(doc(as('poster1'), 'jobs/js1'), job({ searchTerms: ['clean', 'office'] })));
+  await assertFails(setDoc(doc(as('poster1'), 'jobs/js2'), job({ searchTerms: 'clean' })));
+  await assertFails(setDoc(doc(as('poster1'), 'jobs/js3'), job({
+    searchTerms: Array.from({ length: 61 }, (_, i) => `t${i}`),
+  })));
+});
 test('jobs: only owner updates; posterId immutable', async () => {
   await assertSucceeds(updateDoc(doc(as('poster1'), 'jobs/j1'), { isFilled: true }));
   await assertFails(updateDoc(doc(as('other'), 'jobs/j1'), { title: 'hijack' }));

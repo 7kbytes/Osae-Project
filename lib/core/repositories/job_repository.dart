@@ -48,6 +48,12 @@ class FirestoreJobRepository implements JobRepository {
     if (category != null && category != 'All' && category.isNotEmpty) {
       query = query.where('category', isEqualTo: category);
     }
+    // Whole-word match on the stored keywords; the substring pass below then
+    // narrows what came back (Firestore cannot do substring matching).
+    final term = search == null ? null : JobPost.searchTermFor(search);
+    if (term != null) {
+      query = query.where('searchTerms', arrayContains: term);
+    }
     if (limit != null) query = query.limit(limit);
 
     return query.snapshots().map((snapshot) {
@@ -192,12 +198,18 @@ class InMemoryJobRepository implements JobRepository {
         final matchesCity = city == null || city == 'All' || job.city == city;
         final matchesCategory =
             category == null || category == 'All' || job.category == category;
+        // Mirrors Firestore: whole-word keyword match, then substring.
+        final term = search == null ? null : JobPost.searchTermFor(search);
         final matchesSearch =
-            search == null ||
-            search.trim().isEmpty ||
-            job.title.toLowerCase().contains(search.toLowerCase()) ||
-            job.description.toLowerCase().contains(search.toLowerCase()) ||
-            job.locationName.toLowerCase().contains(search.toLowerCase());
+            term == null ||
+            (job.searchTerms.contains(term) &&
+                (job.title.toLowerCase().contains(search!.toLowerCase()) ||
+                    job.description.toLowerCase().contains(
+                      search.toLowerCase(),
+                    ) ||
+                    job.locationName.toLowerCase().contains(
+                      search.toLowerCase(),
+                    )));
         return matchesCity && matchesCategory && matchesSearch;
       }).toList();
       return limit == null ? matches : matches.take(limit).toList();

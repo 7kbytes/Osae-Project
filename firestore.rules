@@ -75,7 +75,10 @@ service cloud.firestore {
         d.description is string && d.description.size() <= 5000 &&
         d.payRate is number && d.payRate >= 0 &&
         d.posterId is string &&
-        (!('status' in d) || d.status in ['open', 'inProgress', 'completed']);
+        (!('status' in d) || d.status in ['open', 'inProgress', 'completed']) &&
+        // Search keywords: bounded so a poster cannot bloat the document.
+        (!('searchTerms' in d) ||
+          (d.searchTerms is list && d.searchTerms.size() <= 60));
     }
 
     match /jobs/{jobId} {

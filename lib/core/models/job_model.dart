@@ -136,7 +136,60 @@ class JobPost {
       'status': status.name,
       'isFilled': isFilled || status != JobStatus.open,
       'createdAt': createdAt.toIso8601String(),
+      'searchTerms': searchTerms,
     };
+  }
+
+  /// Word prefixes from the fields people search on, stored on the document so
+  /// Firestore can match a partly typed word with `array-contains`. Prefixes,
+  /// not whole words, so "clean" finds "Cleaning" while the user is still
+  /// typing. Firestore has no substring search, so a query that starts
+  /// mid-word ("leaning") is not matched by the backend; the loaded pages are
+  /// still filtered by substring on top of this (see docs/02).
+  List<String> get searchTerms =>
+      buildSearchTerms([title, locationName, category, city]);
+
+  /// Longest prefix stored (and matched), to bound document size.
+  static const int maxTermLength = 12;
+  static const int _minTermLength = 3;
+  static const int _maxTerms = 60;
+
+  static List<String> buildSearchTerms(List<String> sources) {
+    final terms = <String>{};
+    for (final source in sources) {
+      for (final word in source.toLowerCase().split(RegExp(r'[^a-z0-9]+'))) {
+        if (word.isEmpty) continue;
+        if (word.length < _minTermLength) {
+          terms.add(word);
+          continue;
+        }
+        final longest = word.length < maxTermLength
+            ? word.length
+            : maxTermLength;
+        for (var end = _minTermLength; end <= longest; end++) {
+          terms.add(word.substring(0, end));
+        }
+      }
+    }
+    return terms.take(_maxTerms).toList();
+  }
+
+  /// The term a search box query is matched against, or null when the query
+  /// is too short to query on (the backend query then stays unfiltered and
+  /// the loaded pages are filtered client-side).
+  static String? searchTermFor(String query) {
+    final words = query
+        .toLowerCase()
+        .split(RegExp(r'[^a-z0-9]+'))
+        .where((w) => w.length >= _minTermLength)
+        .toList();
+    if (words.isEmpty) return null;
+    // Longest word is the most selective, so the backend returns the least.
+    words.sort((a, b) => b.length.compareTo(a.length));
+    final word = words.first;
+    return word.length <= maxTermLength
+        ? word
+        : word.substring(0, maxTermLength);
   }
 
   factory JobPost.fromMap(Map<String, dynamic> map, String docId) {

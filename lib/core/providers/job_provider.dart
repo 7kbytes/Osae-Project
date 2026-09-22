@@ -66,6 +66,7 @@ class JobProvider with ChangeNotifier {
         .getJobsStream(
           city: _selectedCity,
           category: _selectedCategory,
+          search: _searchQuery,
           limit: _limit,
         )
         .listen(
@@ -235,6 +236,7 @@ class JobProvider with ChangeNotifier {
 
   /// A new filter is a new query: go back to the first page and re-subscribe.
   void _restartPaging() {
+    _searchDebounce?.cancel();
     _limit = pageSize;
     _lastPageCount = 0;
     _isLoadingMore = false;
@@ -243,10 +245,20 @@ class JobProvider with ChangeNotifier {
     _subscribe();
   }
 
+  /// Filters the loaded jobs at once, then (after a pause in typing) runs the
+  /// search as a backend query so results are not limited to loaded pages.
   void setSearchQuery(String query) {
+    if (query == _searchQuery) return;
     _searchQuery = query;
     notifyListeners();
+
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(searchDebounce, _restartPaging);
   }
+
+  /// How long typing must pause before the search is sent to the backend.
+  static const Duration searchDebounce = Duration(milliseconds: 350);
+  Timer? _searchDebounce;
 
   String? _lastError;
   bool _isLoading = FirebaseService.isInitialized;
@@ -391,6 +403,7 @@ class JobProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _jobsSubscription?.cancel();
     super.dispose();
   }

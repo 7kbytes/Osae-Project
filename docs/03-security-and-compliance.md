@@ -39,7 +39,7 @@ Helper functions: `isSignedIn()`, `isOwner(uid)`, `isAdmin()` (claim `admin == t
 | Collection | Read | Create | Update | Delete |
 |---|---|---|---|---|
 | `users/{uid}` | Owner, admin; a public subset via a separate doc or callable | Owner (`id == uid`); `rating` absent or 5 | Owner, but **not** `role` escalation to `admin` and **not** `rating` or `createdAt`; admin | Owner, admin |
-| `jobs/{id}` | Anyone | Signed in, `posterId == auth.uid`, valid fields | Owner, `posterId` immutable; admin | Owner, admin |
+| `jobs/{id}` | Anyone | Signed in, `posterId == auth.uid`, valid fields, `searchTerms` a list of at most 60 | Owner, `posterId` immutable; admin | Owner, admin |
 | `applications/{id}` | Seeker, poster of the job, admin | Signed in, `seekerId == auth.uid`, status `pending` | Poster may change `status` only; seeker may withdraw; admin | Admin |
 | `chats/{id}` | Participants, admin | Participant | Participant (`lastMessage`, `updatedAt` only) | Admin |
 | `chats/{id}/messages/{id}` | Participants, admin | Participant, `senderId == auth.uid` | None | Admin |
