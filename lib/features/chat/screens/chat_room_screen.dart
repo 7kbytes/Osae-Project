@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../app/theme.dart';
+import '../../../core/models/report_model.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/chat_provider.dart';
+import '../../../core/widgets/report_dialog.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   final String roomId;
@@ -87,8 +89,33 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final messages = chatProvider.getMessages(widget.roomId);
     final myId = Provider.of<AuthProvider>(context).currentUser?.id ?? '';
 
+    // The other party, from the room itself, so a report names a real user id.
+    final room = chatProvider.rooms
+        .where((r) => r.id == widget.roomId)
+        .firstOrNull;
+    final otherUserId = room == null
+        ? ''
+        : (room.posterId == myId ? room.seekerId : room.posterId);
+
     return Scaffold(
       appBar: AppBar(
+        actions: [
+          if (myId.isNotEmpty && otherUserId.isNotEmpty)
+            IconButton(
+              key: const Key('report_user_button'),
+              tooltip: 'Report this person',
+              icon: const Icon(Icons.flag_outlined, color: Colors.white),
+              onPressed: () => showReportDialog(
+                context,
+                targetType: ReportTarget.user,
+                targetId: otherUserId,
+                targetTitle: widget.otherUserName,
+                reporterId: myId,
+                title: 'Report ${widget.otherUserName}',
+                confirmation: 'Thanks. Our team will review this person.',
+              ),
+            ),
+        ],
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -139,56 +166,75 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                         alignment: isMe
                             ? Alignment.centerRight
                             : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          constraints: BoxConstraints(
-                            maxWidth: MediaQuery.of(context).size.width * 0.75,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isMe ? AppTheme.primaryColor : Colors.white,
-                            borderRadius: BorderRadius.only(
-                              topLeft: const Radius.circular(16),
-                              topRight: const Radius.circular(16),
-                              bottomLeft: Radius.circular(isMe ? 16 : 4),
-                              bottomRight: Radius.circular(isMe ? 4 : 16),
+                        child: GestureDetector(
+                          onLongPress: isMe || myId.isEmpty
+                              ? null
+                              : () => showReportDialog(
+                                  context,
+                                  targetType: ReportTarget.message,
+                                  targetId: msg.id,
+                                  targetTitle: msg.text.length > 80
+                                      ? '${msg.text.substring(0, 80)}...'
+                                      : msg.text,
+                                  reporterId: myId,
+                                  title: 'Report this message',
+                                  confirmation:
+                                      'Thanks. Our team will review this message.',
+                                ),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.04),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
+                            constraints: BoxConstraints(
+                              maxWidth:
+                                  MediaQuery.of(context).size.width * 0.75,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isMe
+                                  ? AppTheme.primaryColor
+                                  : Colors.white,
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(16),
+                                topRight: const Radius.circular(16),
+                                bottomLeft: Radius.circular(isMe ? 16 : 4),
+                                bottomRight: Radius.circular(isMe ? 4 : 16),
                               ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: isMe
-                                ? CrossAxisAlignment.end
-                                : CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                msg.text,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: isMe
-                                      ? Colors.white
-                                      : AppTheme.textDark,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.04),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                DateFormat('jm').format(msg.timestamp),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: isMe
-                                      ? Colors.white.withValues(alpha: 0.7)
-                                      : AppTheme.textMuted,
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: isMe
+                                  ? CrossAxisAlignment.end
+                                  : CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  msg.text,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: isMe
+                                        ? Colors.white
+                                        : AppTheme.textDark,
+                                  ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 4),
+                                Text(
+                                  DateFormat('jm').format(msg.timestamp),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: isMe
+                                        ? Colors.white.withValues(alpha: 0.7)
+                                        : AppTheme.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );

@@ -9,9 +9,9 @@ import '../../../core/providers/application_provider.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/chat_provider.dart';
 import '../../../core/providers/job_provider.dart';
-import '../../../core/repositories/report_repository.dart';
 import '../../../core/utils/form_validators.dart';
 import '../../../core/utils/input_sanitizer.dart';
+import '../../../core/widgets/report_dialog.dart';
 import '../../applications/screens/applicant_review_screen.dart';
 import '../../chat/screens/chat_room_screen.dart';
 
@@ -259,79 +259,29 @@ class JobDetailScreen extends StatelessWidget {
     BuildContext context,
     JobPost job,
     String reporterId,
-  ) async {
-    String reason = Report.reasons.first;
-    final noteController = TextEditingController();
-    final submit = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) => AlertDialog(
-          title: const Text('Report this job'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                initialValue: reason,
-                isExpanded: true,
-                items: [
-                  for (final r in Report.reasons)
-                    DropdownMenuItem(value: r, child: Text(r)),
-                ],
-                onChanged: (v) => setLocal(() => reason = v ?? reason),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: noteController,
-                maxLength: 500,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Details (optional)',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Submit report'),
-            ),
-          ],
-        ),
-      ),
-    );
-    final note = InputSanitizer.sanitize(noteController.text);
-    noteController.dispose();
-    if (submit != true || !context.mounted) return;
+  ) => showReportDialog(
+    context,
+    targetType: ReportTarget.job,
+    targetId: job.id,
+    targetTitle: job.title,
+    reporterId: reporterId,
+    title: "Report this job",
+    confirmation: "Thanks. Our team will review this job.",
+  );
 
-    final repo = context.read<ReportRepository>();
-    String message;
-    try {
-      await repo.submitReport(
-        Report(
-          id: 'rep_${DateTime.now().millisecondsSinceEpoch}_$reporterId',
-          targetType: ReportTarget.job,
-          targetId: job.id,
-          targetTitle: job.title,
-          reporterId: reporterId,
-          reason: reason,
-          note: note,
-          createdAt: DateTime.now(),
-        ),
-      );
-      message = 'Thanks. Our team will review this job.';
-    } catch (e) {
-      debugPrint('submitReport failed: $e');
-      message = 'Could not send the report. Please try again.';
-    }
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
+  Future<void> _reportPoster(
+    BuildContext context,
+    JobPost job,
+    String reporterId,
+  ) => showReportDialog(
+    context,
+    targetType: ReportTarget.user,
+    targetId: job.posterId,
+    targetTitle: job.posterName,
+    reporterId: reporterId,
+    title: "Report this employer",
+    confirmation: "Thanks. Our team will review this employer.",
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -452,11 +402,21 @@ class JobDetailScreen extends StatelessWidget {
         title: const Text('Job Details'),
         actions: [
           if (currentUser != null && currentUser.id != job.posterId)
-            IconButton(
+            PopupMenuButton<String>(
               key: const Key('report_job_button'),
-              tooltip: 'Report this job',
+              tooltip: 'Report',
               icon: const Icon(Icons.flag_outlined, color: Colors.white),
-              onPressed: () => _reportJob(context, job, currentUser.id),
+              onSelected: (value) => value == 'job'
+                  ? _reportJob(context, job, currentUser.id)
+                  : _reportPoster(context, job, currentUser.id),
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'job', child: Text('Report this job')),
+                PopupMenuItem(
+                  key: Key('report_poster_item'),
+                  value: 'poster',
+                  child: Text('Report this employer'),
+                ),
+              ],
             ),
           IconButton(
             icon: Icon(
