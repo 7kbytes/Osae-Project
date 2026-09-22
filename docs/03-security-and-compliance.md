@@ -8,9 +8,9 @@ Severity: **C**ritical, **H**igh, **M**edium. Status as of 2026-09-20.
 |---|---|---|---|---|---|
 | R1 | C | Sign-in accepts any credentials and falls back to a fake user; the app starts already logged in | `auth_provider.dart` | Real auth only; `startAuthenticated: false`; surface errors | Fixed on branch phase-1-real-backend (tests pass); fake fallback user in the job detail screen removed 2026-09-21 |
 | R2 | C | `FirebaseService.initialize()` never called, so repositories use in-memory data in production | `main.dart`, `firebase_service.dart` | Initialise once at startup, set flag, verify repositories switch | Fixed on branch phase-1-real-backend |
-| R3 | C | Any signed-in user can read and write all `applications` and `chats` | `firestore.rules` | Scope to participants (section 3) | Rules written and tests authored; not yet run or deployed |
-| R4 | H | Any signed-in user can update any job (including `posterId`) | `firestore.rules` | Owner-only update with field validation | Rules written, tests authored; not yet deployed |
-| R5 | H | All user profiles (incl. phone numbers) readable by any signed-in user | `firestore.rules` | Public profile subset vs private fields | Rules written (owner-only read); tests authored; not yet deployed |
+| R3 | C | Any signed-in user can read and write all `applications` and `chats` | `firestore.rules` | Scope to participants (section 3) | Deployed; covered by emulator rule tests (26 pass, 2026-09-22) |
+| R4 | H | Any signed-in user can update any job (including `posterId`) | `firestore.rules` | Owner-only update with field validation | Deployed; covered by emulator rule tests (2026-09-22) |
+| R5 | H | All user profiles (incl. phone numbers) readable by any signed-in user | `firestore.rules` | Public profile subset vs private fields | Deployed, owner-only read; covered by emulator rule tests (2026-09-22) |
 | R6 | H | Admin credentials and the service-account key were handled during development; the admin password was shown in chat | ops | Rotate the admin password and the service-account key; keep the key out of the working tree | **Open, do first** |
 | R7 | H | Maps API key unrestricted | `AndroidManifest.xml`, `web/index.html` | Restrict by HTTP referrer and Android package and SHA-1 | Open |
 | R8 | M | `google-services.json` and `firebase_options.dart` committed | repo | Acceptable for client config, but pair with App Check and per-env config | Open |
