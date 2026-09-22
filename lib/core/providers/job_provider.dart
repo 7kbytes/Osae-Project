@@ -51,13 +51,26 @@ class JobProvider with ChangeNotifier {
     _subscribe();
   }
 
+  /// Bumped per subscription so a late reply from a previous query (e.g. the
+  /// city filter changed while it was in flight) cannot overwrite the feed.
+  int _queryGeneration = 0;
+
   void _subscribe() {
     // Subscribe to repository stream for live updates
     _jobsSubscription?.cancel();
+    final generation = ++_queryGeneration;
+    // City and category are filtered by the backend so the feed pages through
+    // every matching job, not just the ones already loaded. Search stays
+    // client-side: Firestore has no substring matching (see docs/02).
     _jobsSubscription = _jobRepository
-        .getJobsStream(limit: _limit)
+        .getJobsStream(
+          city: _selectedCity,
+          category: _selectedCategory,
+          limit: _limit,
+        )
         .listen(
           (updatedJobs) {
+            if (generation != _queryGeneration) return;
             _isLoading = false;
             _isLoadingMore = false;
             _loadError = null;
@@ -65,13 +78,18 @@ class JobProvider with ChangeNotifier {
             // Against Firestore an empty list is real (e.g. the last job was deleted).
             if (updatedJobs.isNotEmpty || FirebaseService.isInitialized) {
               _jobs = List.from(updatedJobs);
-              _localStorageService.saveJobs(_jobs);
+              // Only cache an unfiltered page: caching a filtered result would
+              // leave the offline feed holding one city or category.
+              if (_selectedCity == 'All' && _selectedCategory == 'All') {
+                _localStorageService.saveJobs(_jobs);
+              }
               notifyListeners();
             } else {
               notifyListeners();
             }
           },
           onError: (Object e) {
+            if (generation != _queryGeneration) return;
             debugPrint('Job stream error: $e');
             _isLoading = false;
             _isLoadingMore = false;
@@ -204,13 +222,25 @@ class JobProvider with ChangeNotifier {
   }
 
   void setCityFilter(String city) {
+    if (city == _selectedCity) return;
     _selectedCity = city;
-    notifyListeners();
+    _restartPaging();
   }
 
   void setCategoryFilter(String category) {
+    if (category == _selectedCategory) return;
     _selectedCategory = category;
+    _restartPaging();
+  }
+
+  /// A new filter is a new query: go back to the first page and re-subscribe.
+  void _restartPaging() {
+    _limit = pageSize;
+    _lastPageCount = 0;
+    _isLoadingMore = false;
+    _isLoading = FirebaseService.isInitialized;
     notifyListeners();
+    _subscribe();
   }
 
   void setSearchQuery(String query) {

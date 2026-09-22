@@ -87,4 +87,46 @@ void main() {
 
     expect(provider.favoriteJobs.map((j) => j.id), contains('job_42'));
   });
+
+  group("filters run as backend queries", () {
+    late JobProvider mixed;
+
+    setUp(() async {
+      mixed = JobProvider(
+        jobRepository: InMemoryJobRepository(
+          initialJobs: [
+            for (var i = 0; i < 45; i++)
+              _job(i).copyWith(city: i.isEven ? "Accra" : "Kumasi"),
+          ],
+        ),
+        localStorageService: storage,
+      );
+      await _settle();
+    });
+
+    test("a city filter queries that city and restarts paging", () async {
+      mixed.loadMore();
+      await _settle();
+      expect(mixed.filteredJobs.length, 2 * JobProvider.pageSize);
+
+      mixed.setCityFilter("Kumasi");
+      await _settle();
+
+      // Back to page one, and every job comes from the filtered query.
+      expect(mixed.filteredJobs.length, JobProvider.pageSize);
+      expect(mixed.filteredJobs.every((j) => j.city == "Kumasi"), isTrue);
+    });
+
+    test("paging continues within a filter", () async {
+      mixed.setCityFilter("Kumasi");
+      await _settle();
+      mixed.loadMore();
+      await _settle();
+
+      // 22 Kumasi jobs in total, so the second page is the last.
+      expect(mixed.filteredJobs.length, 22);
+      expect(mixed.filteredJobs.every((j) => j.city == "Kumasi"), isTrue);
+      expect(mixed.hasMore, isFalse);
+    });
+  });
 }

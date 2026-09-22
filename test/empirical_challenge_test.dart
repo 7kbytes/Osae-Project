@@ -92,6 +92,10 @@ void main() {
             jobProvider.setCityFilter(i % 2 == 0 ? 'Accra' : 'Kumasi');
             jobProvider.setSearchQuery('Stress');
 
+            // City and category are filtered by the backend now, so a filter
+            // change is a new query: let it come back before asserting.
+            await Future<void>.delayed(const Duration(milliseconds: 20));
+
             expect(jobProvider.filteredJobs.isNotEmpty, true);
             expect(jobProvider.currentUserRole, targetRole);
           }

@@ -187,8 +187,8 @@ class InMemoryJobRepository implements JobRepository {
     Timer.run(_notifyJobs);
 
     return _jobsStreamController.stream.map((list) {
-      final page = limit == null ? list : list.take(limit);
-      return page.where((job) {
+      // Filter first, then page: the same order Firestore applies.
+      final matches = list.where((job) {
         final matchesCity = city == null || city == 'All' || job.city == city;
         final matchesCategory =
             category == null || category == 'All' || job.category == category;
@@ -200,6 +200,7 @@ class InMemoryJobRepository implements JobRepository {
             job.locationName.toLowerCase().contains(search.toLowerCase());
         return matchesCity && matchesCategory && matchesSearch;
       }).toList();
+      return limit == null ? matches : matches.take(limit).toList();
     });
   }
 
