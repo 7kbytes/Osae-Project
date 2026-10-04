@@ -7,6 +7,7 @@ import 'package:local_job_connector/core/models/job_application_model.dart';
 import 'package:local_job_connector/core/models/job_model.dart';
 import 'package:local_job_connector/core/models/timestamp_helper.dart';
 import 'package:local_job_connector/core/models/user_model.dart';
+import 'package:local_job_connector/core/providers/application_provider.dart';
 import 'package:local_job_connector/core/providers/auth_provider.dart';
 import 'package:local_job_connector/core/providers/chat_provider.dart';
 import 'package:local_job_connector/core/providers/job_provider.dart';
@@ -442,6 +443,7 @@ void main() {
         JobProvider? jobProvider,
         ChatProvider? chatProvider,
         AuthProvider? authProvider,
+        ApplicationProvider? applicationProvider,
       }) {
         return MultiProvider(
           providers: [
@@ -455,6 +457,9 @@ void main() {
             ChangeNotifierProvider<ChatProvider>(
               create: (_) =>
                   chatProvider ?? ChatProvider(currentUserId: 'seeker_001'),
+            ),
+            ChangeNotifierProvider<ApplicationProvider>(
+              create: (_) => applicationProvider ?? ApplicationProvider(),
             ),
           ],
           child: MaterialApp(theme: AppTheme.lightTheme, home: child),

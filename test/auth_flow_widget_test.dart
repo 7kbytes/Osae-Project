@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_job_connector/app/theme.dart';
 import 'package:local_job_connector/core/models/user_model.dart';
+import 'package:local_job_connector/core/providers/application_provider.dart';
 import 'package:local_job_connector/core/providers/auth_provider.dart';
 import 'package:local_job_connector/core/providers/chat_provider.dart';
 import 'package:local_job_connector/core/providers/job_provider.dart';
+import 'package:local_job_connector/core/repositories/application_repository.dart';
 import 'package:local_job_connector/core/repositories/chat_repository.dart';
 import 'package:local_job_connector/core/repositories/job_repository.dart';
 import 'package:local_job_connector/core/repositories/user_repository.dart';
@@ -17,6 +19,7 @@ Widget createTestApp(
   AuthProvider? auth,
   JobProvider? job,
   ChatProvider? chat,
+  ApplicationProvider? application,
 }) {
   return MultiProvider(
     providers: [
@@ -38,6 +41,13 @@ Widget createTestApp(
             ChatProvider(
               currentUserId: 'seeker_001',
               chatRepository: InMemoryChatRepository(),
+            ),
+      ),
+      ChangeNotifierProvider<ApplicationProvider>(
+        create: (_) =>
+            application ??
+            ApplicationProvider(
+              applicationRepository: InMemoryApplicationRepository(),
             ),
       ),
     ],

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../app/theme.dart';
+import '../../../core/models/job_application_model.dart';
+import '../../../core/providers/application_provider.dart';
+import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/job_provider.dart';
+import '../../notifications/screens/notifications_screen.dart';
 import '../widgets/job_card.dart';
 
 class JobFeedScreen extends StatefulWidget {
@@ -30,18 +34,40 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
     super.dispose();
   }
 
+  int _notificationCount(BuildContext context) {
+    final uid = context.watch<AuthProvider>().currentUser?.id ?? '';
+    final applications = context.watch<ApplicationProvider>().applications;
+    return applications.where((app) {
+      final isNewApplicant =
+          app.posterId == uid && app.status == ApplicationStatus.pending;
+      final isStatusUpdate =
+          app.seekerId == uid && app.status != ApplicationStatus.pending;
+      return isNewApplicant || isStatusUpdate;
+    }).length;
+  }
+
   @override
   Widget build(BuildContext context) {
     final jobProvider = Provider.of<JobProvider>(context);
     final filteredJobs = jobProvider.filteredJobs;
+    final notificationCount = _notificationCount(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Local Job Connector'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_none),
-            onPressed: () {},
+            icon: Badge(
+              isLabelVisible: notificationCount > 0,
+              label: Text('$notificationCount'),
+              child: const Icon(Icons.notifications_none),
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              );
+            },
           ),
         ],
       ),
@@ -98,9 +124,9 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
                         selected: isSelected,
                         onSelected: (_) => jobProvider.setCityFilter(city),
                         selectedColor: AppTheme.secondaryColor,
-                        backgroundColor: Colors.white.withValues(alpha: 0.2),
+                        backgroundColor: Colors.white.withValues(alpha: 0.42),
                         labelStyle: TextStyle(
-                          color: isSelected ? Colors.black : Colors.white,
+                          color: isSelected ? Colors.black : AppTheme.textDark,
                           fontWeight: isSelected
                               ? FontWeight.bold
                               : FontWeight.normal,
