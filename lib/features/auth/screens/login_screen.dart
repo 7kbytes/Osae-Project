@@ -80,8 +80,50 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleForgotPassword() async {
+    final resetEmailController = TextEditingController(
+      text: _emailController.text,
+    );
+    final dialogFormKey = GlobalKey<FormState>();
+
+    final confirmedEmail = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reset your password'),
+        content: Form(
+          key: dialogFormKey,
+          child: TextFormField(
+            controller: resetEmailController,
+            keyboardType: TextInputType.emailAddress,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Email Address',
+              prefixIcon: Icon(Icons.email_outlined),
+            ),
+            validator: (val) => FormValidators.validateEmail(val),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (dialogFormKey.currentState!.validate()) {
+                Navigator.pop(dialogContext, resetEmailController.text);
+              }
+            },
+            child: const Text('Send reset link'),
+          ),
+        ],
+      ),
+    );
+    resetEmailController.dispose();
+
+    if (confirmedEmail == null || !mounted) return;
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final ok = await authProvider.sendPasswordReset(_emailController.text);
+    final ok = await authProvider.sendPasswordReset(confirmedEmail);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -120,250 +162,281 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // App Logo & Header
-                  Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: Container(
+                padding: const EdgeInsets.all(28.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
                     ),
-                    child: const Icon(
-                      Icons.work,
-                      color: Colors.white,
-                      size: 36,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Local Job Connector',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _isSignUp
-                        ? 'Create your account to find or post informal jobs'
-                        : 'Sign in to access local gig opportunities in Ghana',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppTheme.textMuted,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-
-                  // Google Sign-In Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: OutlinedButton(
-                      onPressed: _isLoading ? null : _handleGoogleSignIn,
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFFCBD5E1)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        backgroundColor: Colors.white,
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.g_mobiledata, size: 30, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text(
-                            'Continue with Google',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textDark,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-                  const Row(
+                  ],
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Expanded(child: Divider()),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        child: Text(
-                          'OR EMAIL',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textMuted,
-                          ),
+                      // App Logo & Header
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primaryColor.withValues(
+                                alpha: 0.3,
+                              ),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.work,
+                          color: Colors.white,
+                          size: 36,
                         ),
                       ),
-                      Expanded(child: Divider()),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Local Job Connector',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryColor,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _isSignUp
+                            ? 'Create your account to find or post informal jobs'
+                            : 'Sign in to access local gig opportunities in Ghana',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
 
-                  // Sign Up extra fields
-                  if (_isSignUp) ...[
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Full Name',
-                        prefixIcon: Icon(Icons.person_outline),
-                      ),
-                      validator: (val) => FormValidators.validateRequired(
-                        val,
-                        'Full Name',
-                        minLength: 2,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        labelText: 'Phone Number',
-                        hintText: '+233 24 000 0000',
-                        prefixIcon: Icon(Icons.phone_outlined),
-                      ),
-                      validator: (val) =>
-                          FormValidators.validateGhanaPhone(val),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<UserRole>(
-                            initialValue: _selectedRole,
-                            isExpanded: true,
-                            decoration: const InputDecoration(
-                              labelText: 'Role',
+                      // Google Sign-In Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: OutlinedButton(
+                          onPressed: _isLoading ? null : _handleGoogleSignIn,
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: UserRole.seeker,
-                                child: Text(
-                                  'Job Seeker',
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                            backgroundColor: Colors.white,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(
+                                Icons.g_mobiledata,
+                                size: 30,
+                                color: Colors.red,
                               ),
-                              DropdownMenuItem(
-                                value: UserRole.poster,
+                              SizedBox(width: 8),
+                              Flexible(
                                 child: Text(
-                                  'Employer',
+                                  'Continue with Google',
                                   overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textDark,
+                                  ),
                                 ),
                               ),
                             ],
-                            onChanged: (val) =>
-                                setState(() => _selectedRole = val!),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            initialValue: _selectedCity,
-                            isExpanded: true,
-                            decoration: const InputDecoration(
-                              labelText: 'City',
+                      ),
+
+                      const SizedBox(height: 20),
+                      const Row(
+                        children: [
+                          Expanded(child: Divider()),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              'OR EMAIL',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textMuted,
+                              ),
                             ),
-                            items: _cities
-                                .map(
-                                  (c) => DropdownMenuItem(
-                                    value: c,
+                          ),
+                          Expanded(child: Divider()),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Sign Up extra fields
+                      if (_isSignUp) ...[
+                        TextFormField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Full Name',
+                            prefixIcon: Icon(Icons.person_outline),
+                          ),
+                          validator: (val) => FormValidators.validateRequired(
+                            val,
+                            'Full Name',
+                            minLength: 2,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _phoneController,
+                          keyboardType: TextInputType.phone,
+                          decoration: const InputDecoration(
+                            labelText: 'Phone Number',
+                            hintText: '+233 24 000 0000',
+                            prefixIcon: Icon(Icons.phone_outlined),
+                          ),
+                          validator: (val) =>
+                              FormValidators.validateGhanaPhone(val),
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<UserRole>(
+                                initialValue: _selectedRole,
+                                isExpanded: true,
+                                decoration: const InputDecoration(
+                                  labelText: 'Role',
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: UserRole.seeker,
                                     child: Text(
-                                      c,
+                                      'Job Seeker',
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
+                                  DropdownMenuItem(
+                                    value: UserRole.poster,
+                                    child: Text(
+                                      'Employer',
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                                onChanged: (val) =>
+                                    setState(() => _selectedRole = val!),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                initialValue: _selectedCity,
+                                isExpanded: true,
+                                decoration: const InputDecoration(
+                                  labelText: 'City',
+                                ),
+                                items: _cities
+                                    .map(
+                                      (c) => DropdownMenuItem(
+                                        value: c,
+                                        child: Text(
+                                          c,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) =>
+                                    setState(() => _selectedCity = val!),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+
+                      // Email & Password Fields
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(
+                          labelText: 'Email Address',
+                          prefixIcon: Icon(Icons.email_outlined),
+                        ),
+                        validator: (val) => FormValidators.validateEmail(val),
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: Icon(Icons.lock_outline),
+                        ),
+                        validator: (val) =>
+                            FormValidators.validatePassword(val),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Submit Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _handleEmailSubmit,
+                          child: _isLoading
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white,
                                 )
-                                .toList(),
-                            onChanged: (val) =>
-                                setState(() => _selectedCity = val!),
+                              : Text(_isSignUp ? 'Create Account' : 'Sign In'),
+                        ),
+                      ),
+
+                      if (!_isSignUp)
+                        TextButton(
+                          onPressed: _isLoading ? null : _handleForgotPassword,
+                          child: const Text('Forgot password?'),
+                        ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () {
+                          setState(() => _isSignUp = !_isSignUp);
+                        },
+                        child: Text(
+                          _isSignUp
+                              ? 'Already have an account? Sign In'
+                              : 'Don\'t have an account? Register Now',
+                          style: const TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                  ],
-
-                  // Email & Password Fields
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Email Address',
-                      prefixIcon: Icon(Icons.email_outlined),
-                    ),
-                    validator: (val) => FormValidators.validateEmail(val),
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon: Icon(Icons.lock_outline),
-                    ),
-                    validator: (val) => FormValidators.validatePassword(val),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Submit Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleEmailSubmit,
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Text(_isSignUp ? 'Create Account' : 'Sign In'),
-                    ),
-                  ),
-
-                  if (!_isSignUp)
-                    TextButton(
-                      onPressed: _isLoading ? null : _handleForgotPassword,
-                      child: const Text('Forgot password?'),
-                    ),
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () {
-                      setState(() => _isSignUp = !_isSignUp);
-                    },
-                    child: Text(
-                      _isSignUp
-                          ? 'Already have an account? Sign In'
-                          : 'Don\'t have an account? Register Now',
-                      style: const TextStyle(
-                        color: AppTheme.primaryColor,
-                        fontWeight: FontWeight.bold,
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
