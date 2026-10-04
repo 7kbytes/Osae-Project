@@ -124,9 +124,9 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
                         selected: isSelected,
                         onSelected: (_) => jobProvider.setCityFilter(city),
                         selectedColor: AppTheme.secondaryColor,
-                        backgroundColor: Colors.white.withValues(alpha: 0.42),
+                        backgroundColor: Colors.white,
                         labelStyle: TextStyle(
-                          color: isSelected ? Colors.black : AppTheme.textDark,
+                          color: Colors.black,
                           fontWeight: isSelected
                               ? FontWeight.bold
                               : FontWeight.normal,
