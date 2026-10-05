@@ -1,0 +1,20 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "flutter-web-dev",
+      "runtimeExecutable": "C:\\Users\\Administrator\\flutter\\bin\\flutter.bat",
+      "runtimeArgs": [
+        "run",
+        "-d",
+        "web-server",
+        "--web-port",
+        "8765",
+        "--web-hostname",
+        "127.0.0.1",
+        "--dart-define=DEMO_MODE=true"
+      ],
+      "port": 8765
+    }
+  ]
+}
