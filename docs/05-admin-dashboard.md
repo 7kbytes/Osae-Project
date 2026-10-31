@@ -2,7 +2,7 @@
 
 ## 1. Current state (v0)
 
-Location: `web/admin/index.html`, served at `/admin/` after `flutter build web` and hosting deploy. Single file, Firebase JS SDK from the CDN, live Firestore listeners (limit 1000 per collection).
+Location: `web/admin/index.html` and `web/admin/admin.js`, served at `/admin/` after `flutter build web` and hosting deploy. The script is a separate file so the CSP can forbid inline scripts. Firebase JS SDK from the CDN, live Firestore listeners (limit 1000 per collection).
 
 Implemented: email/password sign-in with an `admins/{uid}` check; overview statistics; users (search, role change, delete profile); jobs (status change, delete); applications (status change, delete); chats (read, delete messages or rooms); CSV export.
 
@@ -41,7 +41,7 @@ Implemented as Firebase custom claims (`{role: 'moderator'}`) set by a Cloud Fun
 ## 4. Non-functional
 
 - Do not rely on hidden URLs; every check is server-enforced (rules, claims).
-- No inline user content rendering without escaping (already done through `esc()`); add a Content Security Policy header in `firebase.json`.
+- No inline user content rendering without escaping (already done through `esc()`); every value and document id must go through it. A Content Security Policy for `/admin/**` is set in `firebase.json`.
 - Add `X-Frame-Options`/`frame-ancestors` and `Referrer-Policy` headers for `/admin/**`.
 - Move to a proper build (Vite plus TypeScript) when the page exceeds roughly 1,000 lines, so it can be unit tested. Until then, keep it single-file.
 - Tests: rule tests for each role; a Playwright smoke test (sign-in, list, change status, delete) against the emulator.

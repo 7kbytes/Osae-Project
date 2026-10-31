@@ -81,7 +81,9 @@ class JobProvider with ChangeNotifier {
               _jobs = List.from(updatedJobs);
               // Only cache an unfiltered page: caching a filtered result would
               // leave the offline feed holding one city or category.
-              if (_selectedCity == 'All' && _selectedCategory == 'All') {
+              if (_selectedCity == 'All' &&
+                  _selectedCategory == 'All' &&
+                  _searchQuery.isEmpty) {
                 _localStorageService.saveJobs(_jobs);
               }
               notifyListeners();
@@ -281,23 +283,53 @@ class JobProvider with ChangeNotifier {
   /// Reason the last write to the backend failed, if any.
   String? get lastError => _lastError;
 
-  Future<void> toggleFavorite(
-    String jobId, {
-    String userId = 'usr_default_01',
-  }) async {
-    if (_favoriteJobIds.contains(jobId)) {
-      _favoriteJobIds.remove(jobId);
-    } else {
+  /// Binds favourites to the signed-in user: the backend is the source of
+  /// truth, so they follow the account and never leak between accounts.
+  void bindFavorites(String userId) {
+    if (userId == _favoritesUserId) return;
+    _favoritesUserId = userId;
+    _favoritesSubscription?.cancel();
+    _favoritesSubscription = null;
+    _favoriteJobIds.clear();
+    notifyListeners();
+    if (userId.isEmpty) return;
+    _favoritesSubscription = _jobRepository
+        .getFavoriteJobIdsStream(userId)
+        .listen((ids) {
+          _favoriteJobIds
+            ..clear()
+            ..addAll(ids);
+          _localStorageService.saveFavorites(_favoriteJobIds);
+          notifyListeners();
+        }, onError: (Object e) => debugPrint('Favorites stream error: $e'));
+  }
+
+  String? _favoritesUserId;
+  StreamSubscription<Set<String>>? _favoritesSubscription;
+
+  Future<void> toggleFavorite(String jobId, {String userId = ''}) async {
+    final saved = !_favoriteJobIds.contains(jobId);
+    if (saved) {
       _favoriteJobIds.add(jobId);
+    } else {
+      _favoriteJobIds.remove(jobId);
     }
     await _localStorageService.saveFavorites(_favoriteJobIds);
     notifyListeners();
 
     if (userId.isEmpty) return;
     try {
-      await _jobRepository.toggleFavorite(userId, jobId);
+      await _jobRepository.setFavorite(userId, jobId, saved);
     } catch (e) {
       debugPrint('toggleFavorite failed: $e');
+      if (saved) {
+        _favoriteJobIds.remove(jobId);
+      } else {
+        _favoriteJobIds.add(jobId);
+      }
+      await _localStorageService.saveFavorites(_favoriteJobIds);
+      _lastError = 'Could not update your saved jobs.';
+      notifyListeners();
     }
   }
 
@@ -405,6 +437,7 @@ class JobProvider with ChangeNotifier {
   void dispose() {
     _searchDebounce?.cancel();
     _jobsSubscription?.cancel();
+    _favoritesSubscription?.cancel();
     super.dispose();
   }
 }

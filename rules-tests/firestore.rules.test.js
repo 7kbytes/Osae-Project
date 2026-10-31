@@ -122,9 +122,26 @@ test('applications: list queries must be scoped to the caller', async () => {
   await assertFails(getDocs(col));
 });
 test('applications: seeker creates only pending, in own name', async () => {
-  await assertSucceeds(setDoc(doc(as('seeker2'), 'applications/a2'), application({ seekerId: 'seeker2' })));
-  await assertFails(setDoc(doc(as('seeker2'), 'applications/a3'), application({ seekerId: 'seeker1' })));
-  await assertFails(setDoc(doc(as('seeker2'), 'applications/a4'), application({ seekerId: 'seeker2', status: 'accepted' })));
+  await assertSucceeds(setDoc(doc(as('seeker2'), 'applications/j1_seeker2'), application({ seekerId: 'seeker2' })));
+  await assertFails(setDoc(doc(as('seeker2'), 'applications/j1_seeker1'), application({ seekerId: 'seeker1' })));
+  await assertFails(setDoc(doc(as('seeker3'), 'applications/j1_seeker3'), application({ seekerId: 'seeker3', status: 'accepted' })));
+});
+test('applications: must match the real job and be one per seeker', async () => {
+  await assertFails(setDoc(doc(as('seeker2'), 'applications/j1_seeker2'), application({ seekerId: 'seeker2', posterId: 'victim' })));
+  await assertFails(setDoc(doc(as('seeker2'), 'applications/nojob_seeker2'), application({ seekerId: 'seeker2', jobId: 'nojob' })));
+  await assertFails(setDoc(doc(as('seeker2'), 'applications/random'), application({ seekerId: 'seeker2' })));
+  await assertSucceeds(setDoc(doc(as('seeker2'), 'applications/j1_seeker2'), application({ seekerId: 'seeker2' })));
+  await assertFails(setDoc(doc(as('seeker2'), 'applications/j1_seeker2'), application({ seekerId: 'seeker2' })));
+});
+test('applications: phone is shared only on accepting; status moves forward', async () => {
+  await assertFails(updateDoc(doc(as('poster1'), 'applications/a1'), { status: 'rejected', posterPhone: '024' }));
+  await assertSucceeds(updateDoc(doc(as('poster1'), 'applications/a1'), { status: 'accepted', posterPhone: '024' }));
+  await assertFails(updateDoc(doc(as('poster1'), 'applications/a1'), { status: 'pending' }));
+  await assertSucceeds(updateDoc(doc(as('poster1'), 'applications/a1'), { status: 'completed' }));
+  await assertFails(updateDoc(doc(as('poster1'), 'applications/a1'), { status: 'accepted' }));
+});
+test('jobs: the poster phone cannot be stored on a public job', async () => {
+  await assertFails(setDoc(doc(as('poster1'), 'jobs/jp'), job({ posterPhone: '024' })));
 });
 test('applications: poster changes status only; seeker cannot', async () => {
   await assertSucceeds(updateDoc(doc(as('poster1'), 'applications/a1'), { status: 'accepted' }));
@@ -143,10 +160,12 @@ test('chats: only members and admin can read', async () => {
 test('chats: cannot create a chat you are not part of', async () => {
   await assertSucceeds(setDoc(doc(as('seeker2'), 'chats/c2'), { ...chatDoc, seekerId: 'seeker2' }));
   await assertFails(setDoc(doc(as('other'), 'chats/c3'), chatDoc));
+  await assertFails(setDoc(doc(as('seeker2'), 'chats/c4'), { ...chatDoc, seekerId: 'seeker2', posterId: 'victim' }));
 });
 test('chats: members cannot swap participants', async () => {
   await assertSucceeds(updateDoc(doc(as('seeker1'), 'chats/c1'), { lastMessage: 'new' }));
   await assertFails(updateDoc(doc(as('seeker1'), 'chats/c1'), { posterId: 'other' }));
+  await assertFails(updateDoc(doc(as('seeker1'), 'chats/c1'), { posterName: 'spoof' }));
 });
 test('messages: read and write limited to members; sender must match', async () => {
   await assertSucceeds(getDoc(doc(as('poster1'), 'chats/c1/messages/m1')));
@@ -154,6 +173,17 @@ test('messages: read and write limited to members; sender must match', async () 
   await assertSucceeds(setDoc(doc(as('poster1'), 'chats/c1/messages/m2'), { senderId: 'poster1', text: 'hi' }));
   await assertFails(setDoc(doc(as('poster1'), 'chats/c1/messages/m3'), { senderId: 'seeker1', text: 'spoof' }));
   await assertFails(setDoc(doc(as('other'), 'chats/c1/messages/m4'), { senderId: 'other', text: 'intrude' }));
+});
+test('messages: ids are limited to a safe character set', async () => {
+  await assertSucceeds(setDoc(doc(as('seeker1'), 'chats/c1/messages/msg_123-a'), { senderId: 'seeker1', text: 'ok' }));
+  await assertFails(setDoc(doc(as('seeker1'), 'chats/c1/messages/"><img src=x onerror=alert(1)>'), { senderId: 'seeker1', text: 'xss' }));
+});
+test('chats: either member can look a room up by job, seeker and poster', async () => {
+  const q = (db) => query(collection(db, 'chats'), where('jobId', '==', 'j1'),
+    where('seekerId', '==', 'seeker1'), where('posterId', '==', 'poster1'));
+  await assertSucceeds(getDocs(q(as('poster1'))));
+  await assertSucceeds(getDocs(q(as('seeker1'))));
+  await assertFails(getDocs(q(as('other'))));
 });
 test('messages: members can only mark read; admin can delete', async () => {
   await assertSucceeds(updateDoc(doc(as('poster1'), 'chats/c1/messages/m1'), { isRead: true }));

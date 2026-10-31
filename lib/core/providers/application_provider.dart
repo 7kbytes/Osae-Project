@@ -218,7 +218,8 @@ class ApplicationProvider with ChangeNotifier {
     _currentSeekerId ??= applicantId;
 
     final application = JobApplication(
-      id: applicationId ?? 'app_${DateTime.now().millisecondsSinceEpoch}',
+      // Fixed id: the rules use it to allow one application per job.
+      id: applicationId ?? '${jobId}_$applicantId',
       jobId: jobId,
       jobTitle: jobTitle,
       seekerId: applicantId,
@@ -251,20 +252,51 @@ class ApplicationProvider with ChangeNotifier {
   Future<bool> updateApplicationStatus(
     String applicationId,
     ApplicationStatus status,
+  ) => _applyUpdate(
+    applicationId,
+    (app) => app.copyWith(status: status),
+    () => _applicationRepository.updateStatus(applicationId, status),
+  );
+
+  /// Accepts an application, sharing [posterPhone] with that seeker only.
+  Future<bool> acceptApplication(String applicationId, String posterPhone) {
+    final index = _applications.indexWhere((app) => app.id == applicationId);
+    if (index == -1) return Future.value(false);
+    final jobId = _applications[index].jobId;
+    return _applyUpdate(
+      applicationId,
+      (app) => app.copyWith(
+        status: ApplicationStatus.accepted,
+        posterPhone: posterPhone,
+      ),
+      () => _applicationRepository.acceptApplication(
+        applicationId,
+        jobId,
+        posterPhone,
+      ),
+    );
+  }
+
+  Future<bool> _applyUpdate(
+    String applicationId,
+    JobApplication Function(JobApplication) change,
+    Future<void> Function() write,
   ) async {
     final index = _applications.indexWhere((app) => app.id == applicationId);
     if (index == -1) return false;
 
     final previous = _applications[index];
-    _applications[index] = previous.copyWith(status: status);
+    _applications[index] = change(previous);
     await _localStorageService.saveApplications(_applications);
     notifyListeners();
 
     try {
-      await _applicationRepository.updateStatus(applicationId, status);
+      await write();
     } catch (e) {
-      debugPrint('ApplicationProvider.updateApplicationStatus error: $e');
-      _applications[index] = previous;
+      debugPrint('ApplicationProvider update error: $e');
+      // Looked up again: the live stream may have replaced the list meanwhile.
+      final current = _applications.indexWhere((a) => a.id == applicationId);
+      if (current != -1) _applications[current] = previous;
       await _localStorageService.saveApplications(_applications);
       _errorMessage = 'Could not update the application.';
       notifyListeners();

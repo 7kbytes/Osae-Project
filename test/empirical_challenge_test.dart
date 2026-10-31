@@ -623,10 +623,6 @@ void main() {
             'Tema Port Berth 2',
           );
           await tester.enterText(
-            find.widgetWithText(TextFormField, 'Contact Phone Number'),
-            '+233 24 999 8877',
-          );
-          await tester.enterText(
             find.widgetWithText(
               TextFormField,
               'Job Description & Requirements',

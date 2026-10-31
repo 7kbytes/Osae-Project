@@ -72,6 +72,7 @@ class RoomDenyingChatRepository extends InMemoryChatRepository {
     required String seekerName,
     required String posterId,
     required String posterName,
+    required String initiatorId,
   }) async => throw Exception('permission-denied');
 }
 

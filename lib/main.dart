@@ -20,9 +20,11 @@ const bool kDemoMode = bool.fromEnvironment('DEMO_MODE');
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LocalStorageService.instance.init();
-  await FirebaseService.initialize(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  if (!kDemoMode) {
+    await FirebaseService.initialize(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
 
   if (!FirebaseService.isInitialized && !kDemoMode) {
     runApp(StartupErrorApp(error: FirebaseService.initError));
@@ -95,6 +97,12 @@ class LocalJobConnectorApp extends StatelessWidget {
             if (role != null && role != jobs!.currentUserRole) {
               WidgetsBinding.instance.addPostFrameCallback(
                 (_) => jobs.setRole(role),
+              );
+            }
+            if (FirebaseService.isInitialized) {
+              final uid = auth.currentUser?.id ?? '';
+              WidgetsBinding.instance.addPostFrameCallback(
+                (_) => jobs!.bindFavorites(uid),
               );
             }
             return jobs!;

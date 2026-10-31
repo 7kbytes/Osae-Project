@@ -71,7 +71,9 @@ service cloud.firestore {
 
     function validJob() {
       let d = request.resource.data;
-      return isStr(d.title, 120) &&
+      // Jobs are public: the poster's phone must never be stored on them.
+      return !('posterPhone' in d) &&
+        isStr(d.title, 120) &&
         d.description is string && d.description.size() <= 5000 &&
         d.payRate is number && d.payRate >= 0 &&
         d.posterId is string &&
@@ -91,14 +93,28 @@ service cloud.firestore {
       allow delete: if isOwner(resource.data.posterId) || isAdmin();
     }
 
+    function jobPoster(jobId) {
+      return get(/databases/$(database)/documents/jobs/$(jobId)).data.posterId;
+    }
+
     // ---- applications ------------------------------------------------------
+
+    function validTransition(from, to) {
+      return from == to ||
+        (from == 'pending' && to in ['accepted', 'rejected']) ||
+        (from == 'accepted' && to in ['completed', 'rejected']);
+    }
 
     match /applications/{applicationId} {
       allow read: if isOwner(resource.data.seekerId) ||
         isOwner(resource.data.posterId) || isAdmin();
 
-      // A seeker may only create a pending application in their own name.
+      // A seeker may only create a pending application in their own name, for
+      // a real job and its real poster. The fixed id allows one per job.
       allow create: if isSignedIn() &&
+        applicationId == request.resource.data.jobId + '_' + request.auth.uid &&
+        !('posterPhone' in request.resource.data) &&
+        jobPoster(request.resource.data.jobId) == request.resource.data.posterId &&
         request.resource.data.seekerId == request.auth.uid &&
         request.resource.data.status == 'pending' &&
         request.resource.data.posterId is string &&
@@ -107,10 +123,15 @@ service cloud.firestore {
           (request.resource.data.note is string &&
            request.resource.data.note.size() <= 1000));
 
-      // The poster may change the status and nothing else.
-      allow update: if (isOwner(resource.data.posterId) && changedOnly(['status']) &&
-          request.resource.data.status in
-            ['pending', 'accepted', 'rejected', 'completed']) ||
+      // The poster may move the status forward and, on accepting, share their
+      // phone with this seeker. Nothing else.
+      allow update: if (isOwner(resource.data.posterId) &&
+          validTransition(resource.data.status, request.resource.data.status) &&
+          (changedOnly(['status']) ||
+            (changedOnly(['status', 'posterPhone']) &&
+             request.resource.data.status == 'accepted' &&
+             request.resource.data.posterPhone is string &&
+             request.resource.data.posterPhone.size() <= 30))) ||
         isAdmin();
 
       allow delete: if isAdmin();
@@ -125,10 +146,12 @@ service cloud.firestore {
 
     match /chats/{chatId} {
       allow read: if isChatMember(resource.data) || isAdmin();
-      allow create: if isChatMember(request.resource.data);
+      // A chat is always about a real job with that job's poster, so nobody
+      // can open one with an arbitrary user.
+      allow create: if isChatMember(request.resource.data) &&
+        jobPoster(request.resource.data.jobId) == request.resource.data.posterId;
       allow update: if (isChatMember(resource.data) &&
-          request.resource.data.seekerId == resource.data.seekerId &&
-          request.resource.data.posterId == resource.data.posterId) || isAdmin();
+          changedOnly(['lastMessage', 'updatedAt'])) || isAdmin();
       allow delete: if isAdmin();
 
       match /messages/{messageId} {
@@ -137,7 +160,9 @@ service cloud.firestore {
         }
 
         allow read: if isChatMember(chat()) || isAdmin();
-        allow create: if isChatMember(chat()) &&
+        // The id is restricted because the admin dashboard renders it.
+        allow create: if messageId.matches('^[A-Za-z0-9_-]{1,128}$') &&
+          isChatMember(chat()) &&
           request.resource.data.senderId == request.auth.uid &&
           isStr(request.resource.data.text, 2000);
         // Members may only mark a message as read.

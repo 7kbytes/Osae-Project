@@ -3,6 +3,8 @@ import '../models/user_model.dart';
 import '../services/mock_data.dart';
 
 abstract class UserRepository {
+  /// Returns null only when no profile exists; backend failures throw so they
+  /// are never mistaken for a new user.
   Future<AppUser?> getUser(String userId);
   Future<void> saveUser(AppUser user);
   Future<void> updateUserRole(String userId, UserRole role);
@@ -29,13 +31,9 @@ class FirestoreUserRepository implements UserRepository {
 
   @override
   Future<AppUser?> getUser(String userId) async {
-    try {
-      final doc = await _usersCollection.doc(userId).get();
-      if (!doc.exists || doc.data() == null) return null;
-      return AppUser.fromMap(doc.data()!, doc.id);
-    } catch (_) {
-      return null;
-    }
+    final doc = await _usersCollection.doc(userId).get();
+    if (!doc.exists || doc.data() == null) return null;
+    return AppUser.fromMap(doc.data()!, doc.id);
   }
 
   @override

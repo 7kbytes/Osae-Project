@@ -10,6 +10,9 @@ class JobApplication {
   final String seekerName;
   final String seekerPhone;
   final String posterId;
+
+  /// The poster's phone, shared with the seeker only on acceptance.
+  final String posterPhone;
   final ApplicationStatus status;
   final String note;
   final DateTime appliedAt;
@@ -22,6 +25,7 @@ class JobApplication {
     required this.seekerName,
     required this.seekerPhone,
     required this.posterId,
+    this.posterPhone = '',
     this.status = ApplicationStatus.pending,
     this.note = '',
     required this.appliedAt,
@@ -35,6 +39,7 @@ class JobApplication {
     String? seekerName,
     String? seekerPhone,
     String? posterId,
+    String? posterPhone,
     ApplicationStatus? status,
     String? note,
     DateTime? appliedAt,
@@ -47,6 +52,7 @@ class JobApplication {
       seekerName: seekerName ?? this.seekerName,
       seekerPhone: seekerPhone ?? this.seekerPhone,
       posterId: posterId ?? this.posterId,
+      posterPhone: posterPhone ?? this.posterPhone,
       status: status ?? this.status,
       note: note ?? this.note,
       appliedAt: appliedAt ?? this.appliedAt,
@@ -62,6 +68,7 @@ class JobApplication {
       'seekerName': seekerName,
       'seekerPhone': seekerPhone,
       'posterId': posterId,
+      if (posterPhone.isNotEmpty) 'posterPhone': posterPhone,
       'status': status.name,
       'note': note,
       'appliedAt': appliedAt.toIso8601String(),
@@ -77,6 +84,7 @@ class JobApplication {
       seekerName: map['seekerName'] ?? '',
       seekerPhone: map['seekerPhone'] ?? '',
       posterId: map['posterId'] ?? '',
+      posterPhone: map['posterPhone'] ?? '',
       status: ApplicationStatus.values.firstWhere(
         (s) => s.name == map['status'],
         orElse: () => ApplicationStatus.pending,

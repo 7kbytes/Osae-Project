@@ -18,7 +18,7 @@ abstract class JobRepository {
   Future<void> deleteJob(String jobId);
   Stream<Set<String>> getFavoriteJobIdsStream(String userId);
   Future<Set<String>> getFavoriteJobIds(String userId);
-  Future<void> toggleFavorite(String userId, String jobId);
+  Future<void> setFavorite(String userId, String jobId, bool saved);
 }
 
 class FirestoreJobRepository implements JobRepository {
@@ -48,28 +48,21 @@ class FirestoreJobRepository implements JobRepository {
     if (category != null && category != 'All' && category.isNotEmpty) {
       query = query.where('category', isEqualTo: category);
     }
-    // Whole-word match on the stored keywords; the substring pass below then
-    // narrows what came back (Firestore cannot do substring matching).
+    // Whole-word match on the stored keywords (Firestore cannot do substring
+    // matching).
     final term = search == null ? null : JobPost.searchTermFor(search);
     if (term != null) {
       query = query.where('searchTerms', arrayContains: term);
     }
     if (limit != null) query = query.limit(limit);
 
-    return query.snapshots().map((snapshot) {
-      var list = snapshot.docs
+    // Returned unfiltered so the provider can tell a full page from the end of
+    // the results; it applies the substring match itself.
+    return query.snapshots().map(
+      (snapshot) => snapshot.docs
           .map((doc) => JobPost.fromMap(doc.data(), doc.id))
-          .toList();
-      if (search != null && search.trim().isNotEmpty) {
-        final queryLower = search.trim().toLowerCase();
-        list = list.where((job) {
-          return job.title.toLowerCase().contains(queryLower) ||
-              job.description.toLowerCase().contains(queryLower) ||
-              job.locationName.toLowerCase().contains(queryLower);
-        }).toList();
-      }
-      return list;
-    });
+          .toList(),
+    );
   }
 
   @override
@@ -99,17 +92,24 @@ class FirestoreJobRepository implements JobRepository {
 
   @override
   Future<void> addJob(JobPost job) async {
-    await _jobsCollection.doc(job.id).set(job.toMap());
+    await _jobsCollection.doc(job.id).set(job.toMap()..remove('posterPhone'));
   }
 
   @override
   Future<void> updateJob(JobPost job) async {
-    await _jobsCollection.doc(job.id).update(job.toMap());
+    // Also clears the phone from jobs saved before it stopped being public.
+    await _jobsCollection.doc(job.id).update({
+      ...job.toMap(),
+      'posterPhone': FieldValue.delete(),
+    });
   }
 
   @override
   Future<void> markJobFilled(String jobId, bool isFilled) async {
-    await _jobsCollection.doc(jobId).update({'isFilled': isFilled});
+    await _jobsCollection.doc(jobId).update({
+      'isFilled': isFilled,
+      'posterPhone': FieldValue.delete(),
+    });
   }
 
   @override
@@ -138,14 +138,13 @@ class FirestoreJobRepository implements JobRepository {
   }
 
   @override
-  Future<void> toggleFavorite(String userId, String jobId) async {
+  Future<void> setFavorite(String userId, String jobId, bool saved) async {
     final favRef = _firestore
         .collection('users')
         .doc(userId)
         .collection('favorites')
         .doc(jobId);
-    final doc = await favRef.get();
-    if (doc.exists) {
+    if (!saved) {
       await favRef.delete();
     } else {
       await favRef.set({
@@ -278,15 +277,12 @@ class InMemoryJobRepository implements JobRepository {
   }
 
   @override
-  Future<void> toggleFavorite(String userId, String jobId) async {
-    if (!_favoritesPerUser.containsKey(userId)) {
-      _favoritesPerUser[userId] = {};
-    }
-    final userFavs = _favoritesPerUser[userId]!;
-    if (userFavs.contains(jobId)) {
-      userFavs.remove(jobId);
-    } else {
+  Future<void> setFavorite(String userId, String jobId, bool saved) async {
+    final userFavs = _favoritesPerUser.putIfAbsent(userId, () => {});
+    if (saved) {
       userFavs.add(jobId);
+    } else {
+      userFavs.remove(jobId);
     }
     _notifyFavorites(userId);
   }

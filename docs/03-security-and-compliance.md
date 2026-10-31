@@ -39,10 +39,10 @@ Helper functions: `isSignedIn()`, `isOwner(uid)`, `isAdmin()` (claim `admin == t
 | Collection | Read | Create | Update | Delete |
 |---|---|---|---|---|
 | `users/{uid}` | Owner, admin; a public subset via a separate doc or callable | Owner (`id == uid`); `rating` absent or 5 | Owner, but **not** `role` escalation to `admin` and **not** `rating` or `createdAt`; admin | Owner, admin |
-| `jobs/{id}` | Anyone | Signed in, `posterId == auth.uid`, valid fields, `searchTerms` a list of at most 60 | Owner, `posterId` immutable; admin | Owner, admin |
-| `applications/{id}` | Seeker, poster of the job, admin | Signed in, `seekerId == auth.uid`, status `pending` | Poster may change `status` only; seeker may withdraw; admin | Admin |
-| `chats/{id}` | Participants, admin | Participant | Participant (`lastMessage`, `updatedAt` only) | Admin |
-| `chats/{id}/messages/{id}` | Participants, admin | Participant, `senderId == auth.uid` | None | Admin |
+| `jobs/{id}` | Anyone | Signed in, `posterId == auth.uid`, valid fields, no `posterPhone`, `searchTerms` a list of at most 60 | Owner, `posterId` immutable; admin | Owner, admin |
+| `applications/{id}` | Seeker, poster of the job, admin | Signed in, `seekerId == auth.uid`, status `pending`, id `{jobId}_{uid}`, `posterId` matches the job | Poster may move `status` forward (pending to accepted/rejected, accepted to completed/rejected) and set `posterPhone` when accepting; admin | Admin |
+| `chats/{id}` | Participants, admin | Participant, `posterId` matches the job | Participant (`lastMessage`, `updatedAt` only); admin | Admin |
+| `chats/{id}/messages/{id}` | Participants, admin | Participant, `senderId == auth.uid`, id matches `[A-Za-z0-9_-]{1,128}` | None | Admin |
 | `reports/{id}` | Admin | Signed in | Admin | Admin |
 | `auditLogs/{id}` | Admin | Admin (or Functions) | None | None |
 | `admins/{uid}` | Self | None | None | None |

@@ -52,8 +52,8 @@ Use Flutter flavours and `--dart-define` (or per-environment `firebase_options`)
 | Collection | Key fields | Notes |
 |---|---|---|
 | `users/{uid}` | displayName, phone, role, city, rating, avatarUrl, createdAt | Doc id must equal the Auth uid |
-| `jobs/{id}` | title, description, category, payRate, payUnit, currency, city, locationName, lat, lng, posterId, posterName, posterPhone, status, isFilled, createdAt | Public read |
-| `applications/{id}` | jobId, jobTitle, seekerId, seekerName, seekerPhone, posterId, status, note, appliedAt | Denormalised for listing |
+| `jobs/{id}` | title, description, category, payRate, payUnit, currency, city, locationName, lat, lng, posterId, posterName, status, isFilled, createdAt | Public read |
+| `applications/{id}` | jobId, jobTitle, seekerId, seekerName, seekerPhone, posterId, posterPhone (set on acceptance), status, note, appliedAt | Id is `{jobId}_{seekerId}`, one per job |
 | `chats/{id}` | jobId, jobTitle, seekerId, seekerName, posterId, posterName, lastMessage, updatedAt | Add `participants: [uid, uid]` for rules |
 | `chats/{id}/messages/{id}` | senderId, senderName, text, timestamp, isRead | |
 | `admins/{uid}` | role, email, createdAt | Interim admin gate (to be replaced by claims) |
@@ -63,7 +63,7 @@ Use Flutter flavours and `--dart-define` (or per-environment `firebase_options`)
 - **`chats.participants`:** array of the two uids, so rules and queries can use `array-contains`.
 - **Deterministic ids:** application id = `{jobId}_{seekerId}` to prevent duplicate applications; chat id = `{jobId}_{seekerId}`.
 - **New collections:** `reports`, `auditLogs`, `deviceTokens` (or a `users/{uid}/tokens` subcollection), `reviews`.
-- **Stop storing PII in job docs where avoidable.** `posterPhone` on a public job is a privacy issue. Move it to the poster's user doc and reveal it only after an accepted application. **[confirm]**
+- **No PII on public job docs.** The poster's phone is copied to the application when it is accepted, so only that seeker sees it. Jobs saved earlier lose the field on their next update; the rest need a one-off cleanup.
 - **Indexes:** commit `firestore.indexes.json` (the `applications` queries need composite indexes on `seekerId`/`posterId` + `appliedAt`).
 - **Pagination:** cursor-based (`startAfterDocument`) for jobs, applications, messages.
 

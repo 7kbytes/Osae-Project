@@ -623,7 +623,9 @@ class JobDetailScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            job.posterPhone,
+                            existingApp?.posterPhone.isNotEmpty == true
+                                ? existingApp!.posterPhone
+                                : 'Phone shared once your application is accepted',
                             style: const TextStyle(
                               fontSize: 14,
                               color: AppTheme.textMuted,
