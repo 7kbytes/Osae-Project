@@ -26,6 +26,10 @@ class AuthProvider with ChangeNotifier {
   String? _lastError;
   StreamSubscription<fb_auth.User?>? _authSubscription;
 
+  /// True while a sign-in/sign-up call owns the session, so the auth listener
+  /// does not race it to create the profile.
+  bool _authFlowActive = false;
+
   bool get _live => FirebaseService.isInitialized;
 
   AuthProvider({
@@ -59,15 +63,27 @@ class AuthProvider with ChangeNotifier {
             _isAuthenticated = false;
             _currentUser = null;
             _email = null;
-            await _localStorageService.clearUser();
+            await _localStorageService.clearSession();
             notifyListeners();
           }
           return;
         }
         // Sign-in/sign-up flows set the user themselves; only restore here when
         // a stored session is picked up on start-up.
+        if (_authFlowActive) return;
         if (_currentUser?.id == fbUser.uid && _isAuthenticated) return;
-        _currentUser = await _loadOrCreateProfile(fbUser);
+        try {
+          _currentUser = await _loadOrCreateProfile(fbUser);
+        } catch (e) {
+          debugPrint('Session restore error: $e');
+          // Offline start: use this user's own cached profile, never a default.
+          final cached = _localStorageService.getUser();
+          if (cached?.id != fbUser.uid) {
+            _fail('Could not load your profile. Please try again.');
+            return;
+          }
+          _currentUser = cached;
+        }
         _email = fbUser.email;
         _isAuthenticated = true;
         notifyListeners();
@@ -130,6 +146,8 @@ class AuthProvider with ChangeNotifier {
 
   String get userEmail {
     if (_email != null && _email!.isNotEmpty) return _email!;
+    // Demo mode only: a live account never shows an invented address.
+    if (_live) return '';
     return _currentUser != null && _currentUser!.displayName.isNotEmpty
         ? '${_currentUser!.displayName.toLowerCase().replaceAll(' ', '.')}@gmail.com'
         : 'user@gmail.com';
@@ -177,6 +195,7 @@ class AuthProvider with ChangeNotifier {
     _lastError = null;
 
     if (_live) {
+      _authFlowActive = true;
       try {
         final credential = await fb_auth.FirebaseAuth.instance
             .signInWithEmailAndPassword(
@@ -189,6 +208,8 @@ class AuthProvider with ChangeNotifier {
       } catch (e) {
         debugPrint('Sign-in error: $e');
         return _fail('Could not sign in. Please try again.');
+      } finally {
+        _authFlowActive = false;
       }
     }
 
@@ -214,6 +235,7 @@ class AuthProvider with ChangeNotifier {
     _lastError = null;
 
     if (_live) {
+      _authFlowActive = true;
       try {
         final credential = await fb_auth.FirebaseAuth.instance
             .createUserWithEmailAndPassword(
@@ -246,6 +268,8 @@ class AuthProvider with ChangeNotifier {
       } catch (e) {
         debugPrint('Sign-up error: $e');
         return _fail('Could not create the account. Please try again.');
+      } finally {
+        _authFlowActive = false;
       }
     }
 
@@ -266,6 +290,7 @@ class AuthProvider with ChangeNotifier {
       if (!kIsWeb) {
         return _fail('Google sign-in is not available on this platform yet.');
       }
+      _authFlowActive = true;
       try {
         final credential = await fb_auth.FirebaseAuth.instance.signInWithPopup(
           fb_auth.GoogleAuthProvider(),
@@ -276,6 +301,8 @@ class AuthProvider with ChangeNotifier {
       } catch (e) {
         debugPrint('Google sign-in error: $e');
         return _fail('Could not sign in with Google. Please try again.');
+      } finally {
+        _authFlowActive = false;
       }
     }
 
@@ -362,6 +389,15 @@ class AuthProvider with ChangeNotifier {
     if (_live) {
       final fbUser = fb_auth.FirebaseAuth.instance.currentUser;
       if (fbUser == null) return _fail('Not signed in.');
+      // Check up front: Firebase refuses a stale login, and by then the
+      // profile would already be gone.
+      final lastSignIn = fbUser.metadata.lastSignInTime;
+      if (lastSignIn == null ||
+          DateTime.now().difference(lastSignIn) > const Duration(minutes: 4)) {
+        return _fail(
+          'For security, please sign out, sign in again, then retry.',
+        );
+      }
       try {
         // Profile first: once the login is deleted the rules no longer
         // recognise the caller.
@@ -369,7 +405,9 @@ class AuthProvider with ChangeNotifier {
         await fbUser.delete();
       } on fb_auth.FirebaseAuthException catch (e) {
         // Restore the profile if the login could not be deleted.
-        await _userRepository.saveUser(user);
+        try {
+          await _userRepository.saveUser(user);
+        } catch (_) {}
         return _fail(_messageFor(e));
       } catch (e) {
         debugPrint('Delete account error: $e');
@@ -385,7 +423,7 @@ class AuthProvider with ChangeNotifier {
     _isAuthenticated = false;
     _currentUser = null;
     _email = null;
-    await _localStorageService.clearUser();
+    await _localStorageService.clearSession();
     notifyListeners();
     return true;
   }
@@ -460,7 +498,7 @@ class AuthProvider with ChangeNotifier {
     _isAuthenticated = false;
     _currentUser = null;
     _email = null;
-    await _localStorageService.clearUser();
+    await _localStorageService.clearSession();
     notifyListeners();
   }
 }

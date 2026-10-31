@@ -12,6 +12,7 @@ abstract class ChatRepository {
     required String seekerName,
     required String posterId,
     required String posterName,
+    required String initiatorId,
   });
   Future<void> sendMessage(String roomId, ChatMessage message);
 }
@@ -68,10 +69,13 @@ class FirestoreChatRepository implements ChatRepository {
     required String seekerName,
     required String posterId,
     required String posterName,
+    required String initiatorId,
   }) async {
     final existingSnapshot = await _chatsCollection
         .where('jobId', isEqualTo: jobId)
         .where('seekerId', isEqualTo: seekerId)
+        // Both members are named so the rules accept the query from either.
+        .where('posterId', isEqualTo: posterId)
         .limit(1)
         .get();
 
@@ -95,7 +99,9 @@ class FirestoreChatRepository implements ChatRepository {
 
     await docRef.set(newRoom.toMap());
 
-    // Send initial greeting message
+    // The greeting speaks for the seeker, so only they can send it.
+    if (initiatorId != seekerId) return docRef.id;
+
     final initMessage = ChatMessage(
       id: _firestore.collection('tmp').doc().id,
       senderId: seekerId,
@@ -237,6 +243,7 @@ class InMemoryChatRepository implements ChatRepository {
     required String seekerName,
     required String posterId,
     required String posterName,
+    required String initiatorId,
   }) async {
     final index = _rooms.indexWhere(
       (r) => r.jobId == jobId && r.seekerId == seekerId,
@@ -261,14 +268,15 @@ class InMemoryChatRepository implements ChatRepository {
 
     _rooms.insert(0, newRoom);
     _messagesPerRoom[newRoomId] = [
-      ChatMessage(
-        id: 'msg_init_${DateTime.now().millisecondsSinceEpoch}',
-        senderId: seekerId,
-        senderName: seekerName,
-        text: 'Hello, I am interested in your job posting: $jobTitle.',
-        timestamp: DateTime.now(),
-        isRead: true,
-      ),
+      if (initiatorId == seekerId)
+        ChatMessage(
+          id: 'msg_init_${DateTime.now().millisecondsSinceEpoch}',
+          senderId: seekerId,
+          senderName: seekerName,
+          text: 'Hello, I am interested in your job posting: $jobTitle.',
+          timestamp: DateTime.now(),
+          isRead: true,
+        ),
     ];
 
     _notifyRooms();

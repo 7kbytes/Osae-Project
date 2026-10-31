@@ -104,6 +104,8 @@ class ChatProvider with ChangeNotifier {
   void setCurrentUser(String userId) {
     if (userId == _currentUserId) return;
     _currentUserId = userId;
+    _roomsSubscription?.cancel();
+    _roomsSubscription = null;
     for (final s in _messageSubscriptions.values) {
       s.cancel();
     }
@@ -221,15 +223,17 @@ class ChatProvider with ChangeNotifier {
     );
 
     _rooms.insert(0, newRoom);
+    final initiatorId = _currentUserId.isEmpty ? seekerId : _currentUserId;
     final initialMsgs = [
-      ChatMessage(
-        id: 'msg_init_${DateTime.now().millisecondsSinceEpoch}',
-        senderId: seekerId,
-        senderName: seekerName,
-        text: 'Hello, I am interested in your job posting: $jobTitle.',
-        timestamp: DateTime.now(),
-        isRead: true,
-      ),
+      if (initiatorId == seekerId)
+        ChatMessage(
+          id: 'msg_init_${DateTime.now().millisecondsSinceEpoch}',
+          senderId: seekerId,
+          senderName: seekerName,
+          text: 'Hello, I am interested in your job posting: $jobTitle.',
+          timestamp: DateTime.now(),
+          isRead: true,
+        ),
     ];
     _messagesPerRoom[newRoomId] = initialMsgs;
 
@@ -249,6 +253,7 @@ class ChatProvider with ChangeNotifier {
           seekerName: seekerName,
           posterId: posterId,
           posterName: posterName,
+          initiatorId: initiatorId,
         )
         .catchError((Object e) {
           debugPrint('ChatProvider.getOrCreateRoom error: $e');

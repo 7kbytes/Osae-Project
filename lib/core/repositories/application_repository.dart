@@ -8,6 +8,14 @@ abstract class ApplicationRepository {
   Stream<List<JobApplication>> getPosterApplications(String posterId);
   Future<void> submitApplication(JobApplication application);
   Future<void> updateStatus(String applicationId, ApplicationStatus status);
+
+  /// Accepts atomically: the application (sharing [posterPhone] with the
+  /// seeker) and the job change together or not at all.
+  Future<void> acceptApplication(
+    String applicationId,
+    String jobId,
+    String posterPhone,
+  );
 }
 
 class FirestoreApplicationRepository implements ApplicationRepository {
@@ -58,6 +66,25 @@ class FirestoreApplicationRepository implements ApplicationRepository {
     await _applicationsCollection.doc(applicationId).update({
       'status': status.name,
     });
+  }
+
+  @override
+  Future<void> acceptApplication(
+    String applicationId,
+    String jobId,
+    String posterPhone,
+  ) async {
+    final batch = _firestore.batch();
+    batch.update(_applicationsCollection.doc(applicationId), {
+      'status': ApplicationStatus.accepted.name,
+      'posterPhone': posterPhone,
+    });
+    batch.update(_firestore.collection('jobs').doc(jobId), {
+      'status': 'inProgress',
+      'isFilled': true,
+      'posterPhone': FieldValue.delete(),
+    });
+    await batch.commit();
   }
 }
 
@@ -119,6 +146,22 @@ class InMemoryApplicationRepository implements ApplicationRepository {
     final index = _applications.indexWhere((app) => app.id == applicationId);
     if (index != -1) {
       _applications[index] = _applications[index].copyWith(status: status);
+      _notify();
+    }
+  }
+
+  @override
+  Future<void> acceptApplication(
+    String applicationId,
+    String jobId,
+    String posterPhone,
+  ) async {
+    final index = _applications.indexWhere((app) => app.id == applicationId);
+    if (index != -1) {
+      _applications[index] = _applications[index].copyWith(
+        status: ApplicationStatus.accepted,
+        posterPhone: posterPhone,
+      );
       _notify();
     }
   }

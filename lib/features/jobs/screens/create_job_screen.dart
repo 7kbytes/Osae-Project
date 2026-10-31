@@ -21,7 +21,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   final _descriptionController = TextEditingController();
   final _payRateController = TextEditingController();
   final _locationController = TextEditingController();
-  final _phoneController = TextEditingController(text: '+233 24 999 8877');
 
   String _selectedCategory = 'Construction & Labor';
   String _selectedCity = 'Accra';
@@ -48,7 +47,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     _descriptionController.dispose();
     _payRateController.dispose();
     _locationController.dispose();
-    _phoneController.dispose();
     super.dispose();
   }
 
@@ -97,7 +95,8 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       longitude: _longitude,
       posterId: me.id,
       posterName: me.displayName,
-      posterPhone: InputSanitizer.sanitizePhone(_phoneController.text),
+      // Not stored on the public job; shared when an application is accepted.
+      posterPhone: '',
       createdAt: DateTime.now(),
     );
 
@@ -265,15 +264,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
               const SizedBox(height: 16),
 
               // Contact Phone
-              TextFormField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Contact Phone Number',
-                  prefixIcon: Icon(Icons.phone),
-                ),
-                validator: (val) => FormValidators.validateGhanaPhone(val),
-              ),
               const SizedBox(height: 16),
 
               // Description

@@ -631,7 +631,11 @@ void main() {
         expect(find.text('GHS 150 '), findsOneWidget);
         expect(find.text('Kejetia New Market, Kumasi, Kumasi'), findsOneWidget);
         expect(find.text('Osei Textiles'), findsOneWidget);
-        expect(find.text('+233 27 333 4455'), findsOneWidget);
+        expect(find.text('+233 27 333 4455'), findsNothing);
+        expect(
+          find.text('Phone shared once your application is accepted'),
+          findsOneWidget,
+        );
       },
     );
   });

@@ -89,6 +89,23 @@ class LocalStorageService {
     }
   }
 
+  /// Removes everything personal when a user leaves the device. Public jobs
+  /// stay so the feed still opens offline.
+  Future<void> clearSession() async {
+    try {
+      if (!isInitialized) return;
+      await prefs.remove(keyUser);
+      await prefs.remove(keyFavorites);
+      await prefs.remove(keyChatRooms);
+      await prefs.remove(keyApplications);
+      for (final key in prefs.getKeys().toList()) {
+        if (key.startsWith(keyMessagesPrefix)) await prefs.remove(key);
+      }
+    } catch (e) {
+      debugPrint('LocalStorageService.clearSession error: $e');
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Jobs Persistence
   // ---------------------------------------------------------------------------

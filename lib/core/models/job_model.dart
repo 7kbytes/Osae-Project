@@ -147,7 +147,7 @@ class JobPost {
   /// mid-word ("leaning") is not matched by the backend; the loaded pages are
   /// still filtered by substring on top of this (see docs/02).
   List<String> get searchTerms =>
-      buildSearchTerms([title, locationName, category, city]);
+      buildSearchTerms([title, locationName, category, city, description]);
 
   /// Longest prefix stored (and matched), to bound document size.
   static const int maxTermLength = 12;

@@ -9,7 +9,7 @@
 | Q1 | Who is the launch audience and city (Accra only, or Accra, Kumasi and Tema)? | Scope of seed data and support | Accra, Kumasi, Tema |
 | Q2 | Phone OTP as the primary sign-in, or email/password? | Auth design, SMS cost | Email plus phone verification |
 | Q3 | Can one account be both seeker and poster? | Data model and UI | Yes, switchable |
-| Q4 | Should posters' phone numbers be public? | Privacy (R5), spam | Hidden until an application is accepted |
+| Q4 | Should posters' phone numbers be public? | Privacy (R5), spam | **Decided:** hidden until an application is accepted |
 | Q5 | Are payments in scope for v1? | Compliance, regulation | Out of scope |
 | Q6 | Who moderates, and what is the response-time promise? | Staffing; admin roles | Owner plus one moderator |
 | Q7 | Who is the team (developers, QA, design) and target launch date? | Roadmap dates | One or two developers; no fixed date |

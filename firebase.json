@@ -30,6 +30,10 @@
         "source": "/admin/**",
         "headers": [
           {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'none'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; connect-src https://*.googleapis.com; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+          },
+          {
             "key": "X-Frame-Options",
             "value": "DENY"
           },

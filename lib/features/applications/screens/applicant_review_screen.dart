@@ -355,20 +355,24 @@ class ApplicantReviewScreen extends StatelessWidget {
                                 icon: const Icon(Icons.check, size: 16),
                                 label: const Text('Accept'),
                                 onPressed: () async {
-                                  await applicationProvider
-                                      .updateApplicationStatus(
+                                  final ok = await applicationProvider
+                                      .acceptApplication(
                                         app.id,
-                                        ApplicationStatus.accepted,
+                                        authProvider.currentUser?.phone ?? '',
                                       );
-                                  await jobProvider.updateJobStatus(
-                                    jobId,
-                                    JobStatus.inProgress,
-                                  );
+                                  if (ok) {
+                                    await jobProvider.updateJobStatus(
+                                      jobId,
+                                      JobStatus.inProgress,
+                                    );
+                                  }
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(
-                                          'Accepted ${app.seekerName} for this job!',
+                                          ok
+                                              ? 'Accepted ${app.seekerName} for this job!'
+                                              : 'Could not accept the application. Please try again.',
                                         ),
                                       ),
                                     );

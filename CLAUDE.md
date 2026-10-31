@@ -25,4 +25,4 @@ Flutter (web, Android, iOS) marketplace for local jobs in Ghana. Backend: Fireba
 7. Report test failures honestly; do not weaken tests to make them pass.
 
 ## Known issues (see docs/03 for the register)
-Sign-in falls back to a fake user; `FirebaseService.initialize()` is never called; rules are too permissive. Do not build new features on top of these without fixing or flagging them.
+Check the register in docs/03 before building on an area. Do not build new features on top of open risks without fixing or flagging them.
